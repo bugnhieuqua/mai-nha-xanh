@@ -665,7 +665,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <!-- Hidden Google GIS Button (Thực tế thực hiện auth) -->
                 <div style="display: none;">
                     <div id="g_id_onload"
-                        data-client_id="1021844138155-g7skop0nkrcms92nskkcq1beqlt2v420.apps.googleusercontent.com"
+                        data-client_id="<?php echo htmlspecialchars($_ENV['GOOGLE_CLIENT_ID'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
                         data-context="signin" data-ux_mode="popup" data-callback="handleGoogleLogin"
                         data-auto_prompt="false">
                     </div>
