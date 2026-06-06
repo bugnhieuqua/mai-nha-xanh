@@ -19,7 +19,9 @@ RUN apt-get update && apt-get install -y \
 RUN a2enmod rewrite
 
 # Đảm bảo chỉ có mpm_prefork được kích hoạt để tránh lỗi "More than one MPM loaded"
-RUN a2dismod mpm_event mpm_worker || true && a2enmod mpm_prefork
+RUN a2dismod mpm_event || true
+RUN a2dismod mpm_worker || true
+RUN a2enmod mpm_prefork || true
 
 # Sao chép toàn bộ mã nguồn của dự án vào thư mục gốc Apache
 COPY . /var/www/html/
