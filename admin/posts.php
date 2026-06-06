@@ -183,7 +183,7 @@ $tab_counts = [
                             <td>
                                 <div style="display:flex;gap:12px;align-items:center;">
                                     <?php if ($p['hinhanh']): ?>
-                                    <img src="<?= htmlspecialchars(buildMediaUrl($p['hinhanh'] ?? '', '..')) ?>" class="room-thumb" style="width:60px;height:45px;border-radius:6px;object-fit:cover;" onerror="this.src='../assets/images/no-image.png'">
+                                    <img src="<?= htmlspecialchars(buildMediaUrl($p['hinhanh'] ?? '', '..')) ?>" class="room-thumb" style="width:60px;height:45px;border-radius:6px;object-fit:cover;" onerror="this.onerror=null; this.src='../assets/images/myhome.png';">
                                     <?php endif; ?>
                                     <div>
                                         <div style="font-weight:700;color:var(--text);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><?= htmlspecialchars($p['tieude']) ?></div>
@@ -599,7 +599,7 @@ function viewPost(post) {
     body.innerHTML = `
         <div style="display:grid; grid-template-columns: 280px 1fr; gap:24px;">
             <div style="position:sticky; top:0;">
-                <img src="${post.hinhanh_preview}" style="width:100%; border-radius:12px; box-shadow:0 10px 20px rgba(0,0,0,0.1);" onerror="this.src='../assets/images/no-image.png'">
+                <img src="${post.hinhanh_preview}" style="width:100%; border-radius:12px; box-shadow:0 10px 20px rgba(0,0,0,0.1);" onerror="this.onerror=null; this.src='../assets/images/myhome.png';">
                 <div style="margin-top:16px; padding:15px; background:#f0fdf4; border-radius:10px; border:1px solid #dcfce7;">
                     <div style="font-size:.75rem; color:#15803d; font-weight:700; text-transform:uppercase; margin-bottom:8px;">Thông tin giá</div>
                     <div style="font-size:1.4rem; font-weight:800; color:#166534;">${Number(post.gia).toLocaleString('vi-VN')} ₫</div>

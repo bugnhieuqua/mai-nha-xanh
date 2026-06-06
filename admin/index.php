@@ -274,7 +274,7 @@ $chat_avg_per_session = $chatbot_sessions > 0 ? ($chatbot_today / $chatbot_sessi
                                     <td>
                                         <div class="post-cell">
                                             <?php if ($post['hinhanh']): ?>
-                                                <img src="<?= htmlspecialchars(buildMediaUrl($post['hinhanh'] ?? '', '..')) ?>" class="post-thumb" onerror="this.src='../assets/images/no-image.png'">
+                                                <img src="<?= htmlspecialchars(buildMediaUrl($post['hinhanh'] ?? '', '..')) ?>" class="post-thumb" onerror="this.onerror=null; this.src='../assets/images/myhome.png';">
                                             <?php endif; ?>
                                             <div class="post-title" title="<?= htmlspecialchars($post['tieude']) ?>">
                                                 <?= htmlspecialchars($post['tieude']) ?>
