@@ -984,7 +984,7 @@ function closeRoomDetails() {
 </div>
 
 <!-- Booking Modal -->
-<div id="bookingModal" class="modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:10001;align-items:center;justify-content:center;">
+<div id="bookingModal" class="modal-overlay" style="z-index: 10001; opacity: 0; pointer-events: none; transition: opacity 0.3s; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.65); position: fixed; top: 0; left: 0; right: 0; bottom: 0;">
     <div class="modal-box" style="background:#fff;border-radius:16px;width:95%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.25);position:relative;">
         <div style="background:linear-gradient(135deg,#10b981,#059669);padding:18px 22px;border-radius:16px 16px 0 0;display:flex;justify-content:space-between;align-items:center;">
             <h3 style="color:#fff;margin:0;font-size:1.1rem;"><i class="fas fa-calendar-check"></i> Đặt phòng</h3>
@@ -1047,13 +1047,26 @@ function openBookingModal() {
         document.getElementById('bk_ngay').value    = '';
         document.getElementById('bk_ghichu').value  = '';
         const modal = document.getElementById('bookingModal');
-        modal.style.display = 'flex';
+        const box = modal.querySelector('.modal-box');
+        modal.style.opacity = '1';
+        modal.style.pointerEvents = 'auto';
+        if (box) box.style.transform = 'translateY(0)';
         document.body.style.overflow = 'hidden';
     }, 300);
 }
 
 function closeBookingModal() {
-    document.getElementById('bookingModal').style.display = 'none';
+    const modal = document.getElementById('bookingModal');
+    const box = modal.querySelector('.modal-box');
+    modal.style.opacity = '0';
+    modal.style.pointerEvents = 'none';
+    if (box) {
+        if (window.innerWidth <= 768) {
+            box.style.transform = 'translateY(100%)';
+        } else {
+            box.style.transform = 'translateY(-20px)';
+        }
+    }
     document.body.style.overflow = '';
 }
 
