@@ -192,7 +192,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 // Decode the JWT token payload (for production, you should verify the signature with Google API Client)
                 $parts = explode('.', $credential);
                 if (count($parts) >= 2) {
-                    $payload = json_decode(base64_decode($parts[1]), true);
+                    // Replace base64url characters with standard base64 characters before decoding
+                    $base64_payload = strtr($parts[1], '-_', '+/');
+                    // Add padding if necessary
+                    $base64_payload .= str_repeat('=', (4 - strlen($base64_payload) % 4) % 4);
+                    $payload = json_decode(base64_decode($base64_payload), true);
                     if ($payload && isset($payload['email'])) {
                         $email = $payload['email'];
                         $name = $payload['name'] ?? 'Google User';
@@ -654,23 +658,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
                 <div class="divider">Hoặc đăng nhập với</div>
 
-                <!-- Nút Custom Google Login -->
-                <button type="button" class="btn-google"
-                    onclick="document.querySelector('.g_id_signin div[role=button]').click();">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google"
-                        class="google-icon">
-                    Đăng nhập bằng Google
-                </button>
-
-                <!-- Hidden Google GIS Button (Thực tế thực hiện auth) -->
-                <div style="display: none;">
-                    <div id="g_id_onload"
-                        data-client_id="<?php echo htmlspecialchars($_ENV['GOOGLE_CLIENT_ID'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
-                        data-context="signin" data-ux_mode="popup" data-callback="handleGoogleLogin"
-                        data-auto_prompt="false">
-                    </div>
+                <!-- Google GIS Button -->
+                <div id="g_id_onload"
+                    data-client_id="<?php echo htmlspecialchars($_ENV['GOOGLE_CLIENT_ID'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+                    data-context="signin" data-ux_mode="popup" data-callback="handleGoogleLogin"
+                    data-auto_prompt="false">
+                </div>
+                <div style="display: flex; justify-content: center; width: 100%;">
                     <div class="g_id_signin" data-type="standard" data-shape="rectangular" data-theme="outline"
-                        data-text="signin_with" data-size="large" data-logo_alignment="left">
+                        data-text="signin_with" data-size="large" data-logo_alignment="center" data-width="340">
                     </div>
                 </div>
 
@@ -678,7 +674,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <form id="google-login-form" method="POST" action="" style="display: none;">
                 <input type="hidden" name="action" value="google_login">
                 <input type="hidden" name="credential" id="google-credential">
-                <input type=" hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token'] ?? ''; ?>">
+                <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token'] ?? ''; ?>">
             </form>
             <p class="toggle-text">Chưa có tài khoản? <a onclick="toggleForm()">Đăng Ký ngay</a></p>
         </div>
@@ -690,7 +686,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             </div>
             <form method="POST" action="">
                 <input type="hidden" name="action" value="register">
-                <input type=" hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token'] ?? ''; ?>">
+                <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token'] ?? ''; ?>">
                 <div class="input-group">
                     <i class="fas fa-user"></i>
                     <input type="text" name="reg_username" placeholder="Tên đăng nhập"
