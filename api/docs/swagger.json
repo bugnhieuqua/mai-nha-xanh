@@ -1,0 +1,542 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Mái Nhà Xanh - API Gateway v2 Documentation",
+    "description": "Tài liệu đặc tả hệ thống RESTful API Gateway v2 của ứng dụng tìm kiếm phòng trọ Mái Nhà Xanh, TP. Vinh, Nghệ An.",
+    "version": "2.0.0"
+  },
+  "servers": [
+    {
+      "url": "../../api",
+      "description": "API Gateway Server gốc"
+    }
+  ],
+  "paths": {
+    "/v2/auth.php": {
+      "get": {
+        "summary": "Lấy thông tin người dùng hiện tại (Session ME)",
+        "description": "Trả về thông tin của tài khoản hiện đang đăng nhập trong Session.",
+        "responses": {
+          "200": {
+            "description": "Lấy thông tin thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "code": { "type": "integer", "example": 200 },
+                    "message": { "type": "string", "example": "Lấy thông tin người dùng thành công!" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "username": { "type": "string", "example": "chutro01" },
+                        "fullname": { "type": "string", "example": "Nguyễn Văn A" },
+                        "role": { "type": "string", "example": "user" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": false },
+                    "code": { "type": "integer", "example": 401 },
+                    "message": { "type": "string", "example": "Chưa đăng nhập." }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Đăng nhập hoặc Đăng xuất",
+        "description": "Hỗ trợ hành động `login` (đăng nhập) hoặc `logout` (đăng xuất) dựa trên tham số query `action`.",
+        "parameters": [
+          {
+            "name": "action",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": ["login", "logout"]
+            },
+            "description": "Hành động đăng nhập hoặc đăng xuất"
+          },
+          {
+            "name": "X-CSRF-TOKEN",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Token CSRF bảo mật (Chỉ bắt buộc đối với action = logout)"
+          }
+        ],
+        "requestBody": {
+          "description": "Thông tin tài khoản đăng nhập (Chỉ yêu cầu khi action = login)",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "description": "Tên đăng nhập hệ thống (Mẫu: Chutro01 hoặc admin)",
+                    "default": "Chutro01"
+                  },
+                  "password": {
+                    "type": "string",
+                    "default": "123456"
+                  },
+                  "role": {
+                    "type": "string",
+                    "description": "Vai trò muốn gán cho phiên (Mặc định tự động lấy theo CSDL nếu để trống)",
+                    "default": "user",
+                    "enum": ["user", "admin"]
+                  }
+                },
+                "required": ["username", "password"]
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "description": "Tên đăng nhập hệ thống (Mẫu: Chutro01 hoặc admin)",
+                    "default": "Chutro01"
+                  },
+                  "password": {
+                    "type": "string",
+                    "default": "123456"
+                  },
+                  "role": {
+                    "type": "string",
+                    "description": "Vai trò muốn gán cho phiên (Mặc định tự động lấy theo CSDL nếu để trống)",
+                    "default": "user",
+                    "enum": ["user", "admin"]
+                  }
+                },
+                "required": ["username", "password"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Thực hiện thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "code": { "type": "integer", "example": 200 },
+                    "message": { "type": "string", "example": "Đăng nhập thành công!" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "username": { "type": "string", "example": "chutro01" },
+                        "csrf_token": { "type": "string", "example": "91a8e1b2f4c3a5d8e7b9" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Thiếu thông tin yêu cầu",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": false },
+                    "code": { "type": "integer", "example": 400 },
+                    "message": { "type": "string", "example": "Thiếu thông tin đăng nhập" }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sai thông tin tài khoản hoặc mật khẩu",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": false },
+                    "code": { "type": "integer", "example": 401 },
+                    "message": { "type": "string", "example": "Tài khoản hoặc mật khẩu không chính xác!" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/rooms.php": {
+      "get": {
+        "summary": "Lấy danh sách phòng trọ",
+        "description": "Lấy toàn bộ danh sách phòng trọ (gộp từ static data và các bài đăng đã duyệt) kèm phân trang, lọc theo giá, diện tích, phường hoặc tìm kiếm văn bản tự do, hỗ trợ sắp xếp.",
+        "parameters": [
+          {
+            "name": "min_price",
+            "in": "query",
+            "schema": { "type": "number", "example": 1000000 },
+            "description": "Giá thuê tối thiểu (VNĐ)"
+          },
+          {
+            "name": "max_price",
+            "in": "query",
+            "schema": { "type": "number", "example": 3000000 },
+            "description": "Giá thuê tối đa (VNĐ)"
+          },
+          {
+            "name": "min_area",
+            "in": "query",
+            "schema": { "type": "number", "example": 20 },
+            "description": "Diện tích tối thiểu (m2)"
+          },
+          {
+            "name": "max_area",
+            "in": "query",
+            "schema": { "type": "number", "example": 40 },
+            "description": "Diện tích tối đa (m2)"
+          },
+          {
+            "name": "ward",
+            "in": "query",
+            "schema": { "type": "string", "example": "Hưng Dũng" },
+            "description": "Phường thuộc TP. Vinh cần lọc"
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": { "type": "string", "example": "máy lạnh" },
+            "description": "Từ khóa tìm kiếm (tiêu đề, mô tả, tiện nghi)"
+          },
+          {
+            "name": "sort_by",
+            "in": "query",
+            "schema": { "type": "string", "enum": ["price_asc", "price_desc", "area_asc", "area_desc", "date_asc", "date_desc"], "default": "date_desc" },
+            "description": "Tiêu chí sắp xếp"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": { "type": "integer", "default": 1 },
+            "description": "Số trang hiện tại"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": { "type": "integer", "default": 10 },
+            "description": "Số lượng phòng mỗi trang"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lấy danh sách thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "code": { "type": "integer", "example": 200 },
+                    "message": { "type": "string", "example": "Lấy danh sách phòng trọ thành công!" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "rooms": { "type": "array", "items": { "$ref": "#/components/schemas/Room" } },
+                        "pagination": {
+                          "type": "object",
+                          "properties": {
+                            "total_items": { "type": "integer", "example": 24 },
+                            "total_pages": { "type": "integer", "example": 3 },
+                            "current_page": { "type": "integer", "example": 1 },
+                            "limit": { "type": "integer", "example": 10 }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Đăng bài cho thuê phòng trọ mới (Yêu cầu Đăng nhập & CSRF)",
+        "description": "Cho phép chủ trọ đăng bài viết phòng trọ mới kèm tải lên nhiều tệp hình ảnh. Bài đăng sẽ được hệ thống kiểm duyệt tự động bằng AI (Gemini) lập tức.",
+        "parameters": [
+          {
+            "name": "X-CSRF-TOKEN",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Token CSRF bảo mật lấy từ Đăng nhập (POST /v2/auth.php?action=login hoặc GET /v2/auth.php?action=me)"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "tieude": { "type": "string", "example": "Phòng trọ rộng đẹp gần ĐH Kinh tế Nghệ An" },
+                  "mota": { "type": "string", "example": "Phòng trọ đầy đủ tiện nghi, giờ giấc tự do..." },
+                  "gia": { "type": "integer", "example": 1800000 },
+                  "dientich": { "type": "number", "example": 25 },
+                  "diachi": { "type": "string", "example": "Phường Hưng Dũng, TP. Vinh, Nghệ An" },
+                  "ten_chunha": { "type": "string", "example": "Cao Thị Quỳnh Như" },
+                  "sdt_chunha": { "type": "string", "example": "0344772466" },
+                  "tiennghi": { "type": "array", "items": { "type": "string" }, "example": ["Wifi", "Máy lạnh", "Nóng lạnh"] },
+                  "tiennghi_khac": { "type": "string", "example": "Ban công rộng" },
+                  "hinhanh": {
+                    "type": "array",
+                    "items": { "type": "string", "format": "binary" },
+                    "description": "Các file ảnh đính kèm phòng trọ (Bắt buộc ít nhất 1 ảnh)"
+                  }
+                },
+                "required": ["tieude", "gia", "dientich", "diachi", "ten_chunha", "sdt_chunha"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Đăng bài thành công và được duyệt tự động bởi AI",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "code": { "type": "integer", "example": 200 },
+                    "message": { "type": "string", "example": "Đăng bài thành công và đã được duyệt tự động bởi Trợ lý AI!" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "integer", "example": 32 },
+                        "verdict": { "type": "string", "example": "SAFE" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Đăng bài thành công nhưng chờ Admin duyệt thủ công (Do cảnh báo của AI hoặc AI bị lỗi)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "code": { "type": "integer", "example": 202 },
+                    "message": { "type": "string", "example": "Đăng bài thành công! Bài viết đang chờ Admin phê duyệt thủ công do có cảnh báo: Ảnh đính kèm không rõ ràng..." },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "integer", "example": 33 },
+                        "verdict": { "type": "string", "example": "WARNING" },
+                        "reasons": { "type": "array", "items": { "type": "string" }, "example": ["Hình ảnh chưa cụ thể"] }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "AI kiểm duyệt tự động từ chối bài đăng do vi phạm quy định",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": false },
+                    "code": { "type": "integer", "example": 422 },
+                    "message": { "type": "string", "example": "Trợ lý AI từ chối bài đăng do vi phạm: Mô tả chứa từ khóa cấm hoặc địa điểm ngoài TP. Vinh..." },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "integer", "example": 34 },
+                        "verdict": { "type": "string", "example": "DANGER" },
+                        "reasons": { "type": "array", "items": { "type": "string" }, "example": ["Địa chỉ bài đăng mâu thuẫn lớn với khu vực hoạt động (TP. Vinh, Nghệ An)"] }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/rooms_search.php": {
+      "post": {
+        "summary": "Tìm kiếm thông minh bằng ngôn ngữ tự nhiên (RAG Entity Extraction)",
+        "description": "Sử dụng mô hình AI (Groq/Llama3) trích xuất bộ lọc (phường, khoảng giá, diện tích, danh sách tiện nghi) từ văn bản mô tả tìm kiếm của người dùng và query trực tiếp cơ sở dữ liệu để trả về kết quả khớp nhất.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "query": { "type": "string", "example": "tìm phòng trọ gần đại học sư phạm kỹ thuật vinh giá dưới 2 triệu có máy lạnh và wifi" }
+                },
+                "required": ["query"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tìm kiếm hoàn tất thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "code": { "type": "integer", "example": 200 },
+                    "message": { "type": "string", "example": "Tìm kiếm thông minh hoàn tất!" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "search_criteria": {
+                          "type": "object",
+                          "properties": {
+                            "ward": { "type": "string", "example": null },
+                            "min_price": { "type": "number", "example": null },
+                            "max_price": { "type": "number", "example": 2000000 },
+                            "min_area": { "type": "number", "example": null },
+                            "max_area": { "type": "number", "example": null },
+                            "amenities": { "type": "array", "items": { "type": "string" }, "example": ["Máy lạnh", "Wifi"] }
+                          }
+                        },
+                        "results": { "type": "array", "items": { "$ref": "#/components/schemas/Room" } },
+                        "total_results": { "type": "integer", "example": 3 }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/chat.php": {
+      "post": {
+        "summary": "AI Chatbot tư vấn RAG (Hỗ trợ Base64 né WAF)",
+        "description": "Hệ thống AI Chatbot RAG thế hệ mới của Mái Nhà Xanh. Tự động phân tích nhu cầu tìm kiếm của người dùng qua tin nhắn cuối cùng để truy vấn danh sách phòng trọ từ database, sau đó nạp dữ liệu phòng khớp này vào prompt của mô hình ngôn ngữ lớn để trả về kết quả trả lời kèm theo mã thẻ phòng dạng `[ROOM:nguon:id]`.",
+        "requestBody": {
+          "required": true,
+          "description": "Có thể gửi chuỗi JSON thô hoặc chuỗi JSON đã mã hóa Base64 (để bypass bộ lọc WAF hosting).",
+          "content": {
+            "text/plain": {
+              "schema": {
+                "type": "string",
+                "example": "eyJtZXNzYWdlcyI6W3sicm9sZSI6InVzZXIiLCJjb250ZW50IjoiVMOsbSBwaMOybmcgZ2nhuqMgZMaw4bubaSAydHIgY8OzIG1heSBs4bqhbmggaMOgbmdtw7RpIn1dfQ=="
+              }
+            },
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "messages": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "role": { "type": "string", "enum": ["user", "assistant"], "example": "user" },
+                        "content": { "type": "string", "example": "Tìm phòng trọ giá dưới 2 triệu ở Hưng Dũng có máy lạnh" }
+                      },
+                      "required": ["role", "content"]
+                    }
+                  }
+                },
+                "required": ["messages"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Phản hồi từ Chatbot RAG (Chuẩn định dạng OpenAI / Groq)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "choices": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "object",
+                            "properties": {
+                              "role": { "type": "string", "example": "assistant" },
+                              "content": { "type": "string", "example": "Chào bạn! Tôi có 3 phòng trọ giá dưới 2 triệu ở Hưng Dũng có máy lạnh:\n\n1. Phòng trọ Hưng Dũng sạch đẹp giá 1.8tr: [ROOM:dangbai:23].\n\nHãy xem thông tin chi tiết qua thẻ phòng phía trên nhé!" }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Room": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "example": 23 },
+          "ten_phong": { "type": "string", "example": "Phòng trọ Hưng Dũng khép kín" },
+          "mota": { "type": "string", "example": "Phòng đẹp mới xây..." },
+          "gia": { "type": "number", "example": 1800000 },
+          "dientich": { "type": "number", "example": 22 },
+          "diachi": { "type": "string", "example": "Phường Hưng Dũng, TP. Vinh, Nghệ An" },
+          "tiennghi": { "type": "string", "example": "Wifi, Máy lạnh, Nóng lạnh" },
+          "ten_chunha": { "type": "string", "example": "Cao Thị Quỳnh Như" },
+          "sdt_chunha": { "type": "string", "example": "0344772466" },
+          "hinhanh": { "type": "string", "example": "uploads/rooms/room_sample.jpg" },
+          "lat": { "type": "number", "example": 18.6852 },
+          "lng": { "type": "number", "example": 105.6983 },
+          "nguon": { "type": "string", "enum": ["phongtro", "dangbai"], "example": "dangbai" },
+          "trangthai": { "type": "string", "enum": ["con_phong", "da_coc", "da_thue"], "example": "con_phong" }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  # Web service: Xây dựng container chạy ứng dụng PHP Apache
+  web:
+    build: .
+    ports:
+      - "8080:80" # Ánh xạ cổng 8080 bên ngoài vào cổng 80 trong container
+    environment:
+      - PORT=80
+      - DB_HOST=db
+      - DB_NAME=quanlytro
+      - DB_USER=root
+      - DB_PASS=rootpassword
+      - GROQ_API_KEY=your_groq_key_here
+      - GEMINI_API_KEY=your_gemini_key_here
+      - ONESIGNAL_APP_ID=your_onesignal_app_id
+      - ONESIGNAL_REST_API_KEY=your_onesignal_rest_key
+      - APP_DEBUG=true
+      - ENABLE_RATE_LIMIT=true
+    volumes:
+      - .:/var/www/html # Mount mã nguồn từ máy vật lý vào container phục vụ live-edit
+    depends_on:
+      - db
+
+  # Database service: Chạy hệ quản trị CSDL MySQL 8.0
+  db:
+    image: mysql:8.0
+    command: --default-authentication-plugin=mysql_native_password
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_DATABASE=quanlytro
+      - MYSQL_ROOT_PASSWORD=rootpassword
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+# Volumes lưu trữ dữ liệu bền vững của CSDL
+volumes:
+  mysql_data:

@@ -1,0 +1,26 @@
+# Environment variables
+.env
+
+# Uploads
+uploads/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Backup Archives
+*.zip
+
+# Agent & Cache directories
+.sixth/
+.gemini/
+scratch/
+
+# Log files
+logs/*.log
+*.log
+
