@@ -29,9 +29,14 @@ function uploadCommentMedia($uploadDir = '../uploads/comments/') {
         $valid = [];
         foreach ($names as $i => $name) {
             if ($name && (int)$errs[$i] === UPLOAD_ERR_OK) {
+                if ((int)$sizes[$i] > 3 * 1024 * 1024) {
+                    $errors[] = 'Dung lượng mỗi ảnh bình luận không được vượt quá 3MB';
+                    break;
+                }
                 $valid[] = $i;
             }
         }
+
 
         if (count($valid) > 5) {
             $errors[] = 'Tối đa 5 ảnh';
@@ -69,9 +74,12 @@ function uploadCommentMedia($uploadDir = '../uploads/comments/') {
         $size = (int)$_FILES['comment_video']['size'];
         $mime = strtolower((string)@mime_content_type($tmp));
 
-        if (!in_array($mime, $allowedVideos, true)) {
+        if ($size > 10 * 1024 * 1024) {
+            $errors[] = 'Dung lượng video bình luận không được vượt quá 10MB';
+        } elseif (!in_array($mime, $allowedVideos, true)) {
             $errors[] = 'Video chỉ chấp nhận MP4/WEBM/OGG/MOV';
         } else {
+
             switch ($mime) {
                 case 'video/webm':     $ext = 'webm'; break;
                 case 'video/ogg':      $ext = 'ogv';  break;

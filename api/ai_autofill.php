@@ -39,6 +39,13 @@ if (!isset($_FILES['image']) || $_FILES['image']['error'] !== UPLOAD_ERR_OK) {
     exit;
 }
 
+if ($_FILES['image']['size'] > 3 * 1024 * 1024) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => 'Dung lượng ảnh không được vượt quá 3MB.']);
+    exit;
+}
+
+
 $imagePath = $_FILES['image']['tmp_name'];
 $imageType = $_FILES['image']['type'];
 

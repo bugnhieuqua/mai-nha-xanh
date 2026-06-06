@@ -78,8 +78,14 @@ foreach ($imageNames as $idx => $name) {
         $errors[] = 'Có lỗi khi tải ảnh lên. Vui lòng thử lại.';
         break;
     }
+    $size = intval($imageSizes[$idx] ?? 0);
+    if ($size > 3 * 1024 * 1024) {
+        $errors[] = 'Dung lượng mỗi ảnh không được vượt quá 3MB';
+        break;
+    }
     $imageIndexes[] = $idx;
 }
+
 
 if (count($imageIndexes) < 1) $errors[] = 'Bắt buộc tải lên ít nhất 1 ảnh';
 if (count($imageIndexes) > 5) $errors[] = 'Tối đa 5 ảnh cho mỗi bài đăng';
@@ -142,6 +148,13 @@ if (isset($_FILES['video']) && intval($_FILES['video']['error'] ?? UPLOAD_ERR_NO
         echo json_encode(['success' => false, 'message' => 'Có lỗi khi tải video lên']);
         exit;
     }
+
+    $vSize = intval($_FILES['video']['size'] ?? 0);
+    if ($vSize > 10 * 1024 * 1024) {
+        echo json_encode(['success' => false, 'message' => 'Dung lượng video không được vượt quá 10MB']);
+        exit;
+    }
+
 
     $videoDir = '../uploads/videos/';
     if (!is_dir($videoDir)) {

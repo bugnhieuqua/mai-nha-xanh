@@ -198,6 +198,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             exit;
         }
 
+        $size = intval($imageSizes[$idx] ?? 0);
+        if ($size > 3 * 1024 * 1024) {
+            foreach ($uploadedImages as $p) { if (file_exists('../../' . $p)) @unlink('../../' . $p); }
+            http_response_code(400);
+            echo json_encode(['success' => false, 'code' => 400, 'message' => 'Dung lượng mỗi ảnh không được vượt quá 3MB.']);
+            exit;
+        }
+
+
         $ext = pathinfo($name, PATHINFO_EXTENSION);
         $fileName = 'room_' . time() . '_' . uniqid() . '_' . $idx . '.' . ($ext ?: 'jpg');
         if (move_uploaded_file($tmp, $uploadDir . $fileName)) {

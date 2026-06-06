@@ -31,6 +31,12 @@ RUN mkdir -p /var/www/html/logs /var/www/html/assets/cache /var/www/html/uploads
     && chmod -R 755 /var/www/html/ \
     && chmod -R 777 /var/www/html/logs /var/www/html/assets/cache /var/www/html/uploads
 
+# Cấu hình PHP để giới hạn upload file (ảnh tối đa 3MB, video tối đa 10MB)
+RUN echo "upload_max_filesize = 10M" > /usr/local/etc/php/conf.d/uploads.ini \
+    && echo "post_max_size = 12M" >> /usr/local/etc/php/conf.d/uploads.ini \
+    && echo "memory_limit = 128M" >> /usr/local/etc/php/conf.d/uploads.ini \
+    && echo "max_execution_time = 120" >> /usr/local/etc/php/conf.d/uploads.ini
+
 # Chuyển đổi cổng Apache động theo biến PORT (Yêu cầu bắt buộc của Railway/Cloud Run)
 RUN sed -i 's/Listen 80/Listen ${PORT}/g' /etc/apache2/ports.conf \
     && sed -i 's/<VirtualHost \*:80>/<VirtualHost *:${PORT}>/g' /etc/apache2/sites-available/000-default.conf

@@ -1,10 +1,17 @@
 #!/bin/bash
 set -e
 
-# Táº¯t cÃ¡c MPM xung Ä‘á»™t ngay khi container khá»Ÿi Ä‘á»™ng (runtime)
+# Tắt các MPM xung đột ngay khi container khởi động (runtime)
 a2dismod mpm_event || true
 a2dismod mpm_worker || true
 a2enmod mpm_prefork || true
 
-# Thá»±c thi lá»‡nh chÃ­nh cá»§a container (apache2-foreground)
+# Đảm bảo quyền ghi cho user www-data trên thư mục volume được mount
+if [ -d /var/www/html/uploads ]; then
+    chown -R www-data:www-data /var/www/html/uploads
+    chmod -R 777 /var/www/html/uploads
+fi
+
+# Thực thi lệnh chính của container (apache2-foreground)
 exec "$@"
+

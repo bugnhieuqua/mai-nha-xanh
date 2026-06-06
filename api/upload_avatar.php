@@ -28,6 +28,12 @@ if ($file['error'] !== UPLOAD_ERR_OK) {
     exit;
 }
 
+if ($file['size'] > 3 * 1024 * 1024) {
+    echo json_encode(['success' => false, 'message' => 'Dung lượng ảnh đại diện không được vượt quá 3MB.']);
+    exit;
+}
+
+
 // Validate file type
 $allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
 $finfo = finfo_open(FILEINFO_MIME_TYPE);
