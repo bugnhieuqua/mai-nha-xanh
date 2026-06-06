@@ -41,6 +41,7 @@ loadEnv();
 // Đảm bảo $_ENV có giá trị từ hệ thống (cho Railway/Docker khi variables_order không chứa 'E')
 $envKeys = [
     'DB_HOST', 'DB_NAME', 'DB_USER', 'DB_PASS', 
+    'MYSQLHOST', 'MYSQLDATABASE', 'MYSQLUSER', 'MYSQLPASSWORD', 'MYSQLPORT', 'MYSQL_URL', 'MYSQL_PRIVATE_URL',
     'GROQ_API_KEY', 'GROQ_MODEL', 'GEMINI_API_KEY', 
     'ONESIGNAL_APP_ID', 'ONESIGNAL_REST_API_KEY', 
     'APP_DEBUG', 'ENABLE_RATE_LIMIT', 'GOOGLE_CLIENT_ID'

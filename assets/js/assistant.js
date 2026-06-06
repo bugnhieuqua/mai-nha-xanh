@@ -28,6 +28,7 @@ if (!chatBody || !messageInput || !sendMessageButton || !chatbotToggler) {
 
   const startSTTBtn = document.querySelector("#start-stt");
   let _ttsHeartbeat = null; // Chrome TTS bug workaround timer
+  let currentActiveBtn = null; // Track current speaking button
 
   // --- Ultra-Fast TTS Cache ---
   let vietnameseVoice = null;
@@ -62,12 +63,33 @@ if (!chatBody || !messageInput || !sendMessageButton || !chatbotToggler) {
   window.addEventListener('load', () => setTimeout(warmUpTTS, 1000));
   document.addEventListener('mousedown', warmUpTTS, { once: true });
 
-  const speakText = (text) => {
+  const resetAudioButton = (btn) => {
+    if (!btn) return;
+    btn.innerText = "volume_up";
+    btn.classList.remove("speaking");
+    btn.title = "Nghe câu trả lời";
+  };
+
+  const speakText = (text, btn = null) => {
     if (!window.speechSynthesis) return;
 
     // 1. Chỉ cancel nếu thực sự đang nói (để tránh wait buffer không đáng có)
-    if (window.speechSynthesis.speaking) window.speechSynthesis.cancel();
-    clearInterval(_ttsHeartbeat);
+    if (window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel();
+      clearInterval(_ttsHeartbeat);
+      
+      // Nếu click trùng nút loa đang phát -> dừng lại hẳn và không nói tiếp
+      if (currentActiveBtn === btn && btn) {
+        resetAudioButton(btn);
+        currentActiveBtn = null;
+        return;
+      }
+    }
+
+    // Khôi phục trạng thái nút loa cũ nếu có
+    if (currentActiveBtn && currentActiveBtn !== btn) {
+      resetAudioButton(currentActiveBtn);
+    }
 
     // 2. Tinh gọn văn bản (Loại bỏ các ký tự Markdown/đặc biệt gây lag)
     let cleanText = text.replace(/[*_#`~>\[\]\(\)-]/g, "").replace(/\s+/g, " ").trim();
@@ -82,6 +104,14 @@ if (!chatBody || !messageInput || !sendMessageButton || !chatbotToggler) {
     utterance.pitch = 1.0;
     utterance.volume = 1.0;
 
+    // Gắn trạng thái cho nút loa hiện tại
+    currentActiveBtn = btn;
+    if (btn) {
+      btn.innerText = "volume_off";
+      btn.classList.add("speaking");
+      btn.title = "Dừng nghe";
+    }
+
     // 4. Heartbeat duy trì truyền dẫn cho Chrome
     const startHeartbeat = () => {
       _ttsHeartbeat = setInterval(() => {
@@ -91,8 +121,15 @@ if (!chatBody || !messageInput || !sendMessageButton || !chatbotToggler) {
     };
 
     utterance.onstart = startHeartbeat;
-    utterance.onend = () => clearInterval(_ttsHeartbeat);
-    utterance.onerror = () => clearInterval(_ttsHeartbeat);
+    
+    const handleSpeechEnd = () => {
+      clearInterval(_ttsHeartbeat);
+      if (btn) resetAudioButton(btn);
+      if (currentActiveBtn === btn) currentActiveBtn = null;
+    };
+
+    utterance.onend = handleSpeechEnd;
+    utterance.onerror = handleSpeechEnd;
 
     // 5. PHÁT NGAY LẬP TỨC (Dùng local voice nên độ trễ < 0.1s)
     window.speechSynthesis.speak(utterance);
@@ -514,7 +551,14 @@ if (!chatBody || !messageInput || !sendMessageButton || !chatbotToggler) {
     if (e.target.classList.contains("message-audio-btn")) {
       const messageDiv = e.target.closest(".message");
       const text = messageDiv.querySelector(".message-text").innerText;
-      speakText(text);
+      speakText(text, e.target);
+    }
+  });
+
+  // Dừng đọc TTS lập tức khi chuyển hướng trang để tránh lỗi phát lặp nền
+  window.addEventListener("beforeunload", () => {
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
     }
   });
 

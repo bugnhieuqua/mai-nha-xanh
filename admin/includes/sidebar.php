@@ -300,5 +300,5 @@ $sidebar_initial = strtoupper(function_exists('mb_substr')
     }
 
     globalAdminPoll();
-    setInterval(globalAdminPoll, 3000);
+    setInterval(globalAdminPoll, 10000);
 </script>

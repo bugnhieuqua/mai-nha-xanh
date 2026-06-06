@@ -8,13 +8,15 @@ class Database {
     private $db_name;
     private $username;
     private $password;
+    private $port;
     public $conn;
 
     public function __construct() {
-        $this->host     = $_ENV['DB_HOST'] ?? 'localhost';
-        $this->db_name  = $_ENV['DB_NAME'] ?? 'quanlytro';
-        $this->username = $_ENV['DB_USER'] ?? 'root';
-        $this->password = $_ENV['DB_PASS'] ?? '';
+        $this->host     = $_ENV['DB_HOST'] ?? $_ENV['MYSQLHOST'] ?? 'localhost';
+        $this->db_name  = $_ENV['DB_NAME'] ?? $_ENV['MYSQLDATABASE'] ?? 'quanlytro';
+        $this->username = $_ENV['DB_USER'] ?? $_ENV['MYSQLUSER'] ?? 'root';
+        $this->password = $_ENV['DB_PASS'] ?? $_ENV['MYSQLPASSWORD'] ?? '';
+        $this->port     = $_ENV['DB_PORT'] ?? $_ENV['MYSQLPORT'] ?? '3306';
     }
 
     // Kết nối database
@@ -23,7 +25,7 @@ class Database {
         
         try {
             $this->conn = new PDO(
-                "mysql:host=" . $this->host . ";dbname=" . $this->db_name,
+                "mysql:host=" . $this->host . ";port=" . $this->port . ";dbname=" . $this->db_name,
                 $this->username,
                 $this->password,
                 [

@@ -72,10 +72,60 @@ function ensurePhongtroRoomStatusSchema(PDO $db): void
     $done = true;
 }
 
+function ensureDatabaseIndexes(PDO $db): void
+{
+    static $done = false;
+    if ($done) {
+        return;
+    }
+
+    $indexes = [
+        ['chatbot_history', 'idx_cbh_support', 'chat_type, is_read, sender'],
+        ['chatbot_history', 'idx_cbh_session', 'session_id'],
+        ['chatbot_history', 'idx_cbh_created', 'created_at'],
+        ['dangbai_chothuetro', 'idx_db_nguoidang', 'nguoidang'],
+        ['dangbai_chothuetro', 'idx_db_trangthai', 'trangthai'],
+        ['dangbai_chothuetro', 'idx_db_trangthai_phong', 'trangthai_phong'],
+        ['dangbai_chothuetro', 'idx_db_gia', 'gia'],
+        ['phongtro', 'idx_pt_trangthai', 'trangthai'],
+        ['users', 'idx_u_username', 'username'],
+        ['users', 'idx_u_email', 'email'],
+        ['dat_phong', 'idx_dp_post_id', 'post_id'],
+        ['notifications', 'idx_notif_user_id', 'user_id'],
+        ['notifications', 'idx_notif_is_read', 'is_read'],
+    ];
+
+    foreach ($indexes as $idx) {
+        try {
+            $stmt = $db->query("SHOW INDEX FROM `{$idx[0]}` WHERE Key_name = '{$idx[1]}'");
+            if ($stmt->rowCount() === 0) {
+                $db->exec("CREATE INDEX `{$idx[1]}` ON `{$idx[0]}` ({$idx[2]})");
+            }
+        } catch (Exception $e) {
+            try {
+                $db->exec("CREATE INDEX `{$idx[1]}` ON `{$idx[0]}` ({$idx[2]})");
+            } catch (Exception $e2) {}
+        }
+    }
+
+    $done = true;
+}
+
 function ensureRoomStatusSchema(PDO $db): void
 {
+    $dbHost = $_ENV['DB_HOST'] ?? $_ENV['MYSQLHOST'] ?? 'localhost';
+    $dbName = $_ENV['DB_NAME'] ?? $_ENV['MYSQLDATABASE'] ?? 'quanlytro';
+    $lockFile = sys_get_temp_dir() . '/.mnx_schema_migrated_' . md5($dbHost . '_' . $dbName);
+    
+    if (file_exists($lockFile)) {
+        return;
+    }
+
     ensureDangbaiRoomStatusSchema($db);
     ensurePhongtroRoomStatusSchema($db);
+    ensureDatabaseIndexes($db);
+
+    @file_put_contents($lockFile, date('Y-m-d H:i:s'));
 }
 
 function normalizeRoomStatusValue(?string $status): string
