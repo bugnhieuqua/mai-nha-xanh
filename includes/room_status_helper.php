@@ -55,6 +55,11 @@ function ensureDangbaiRoomStatusSchema(PDO $db): void
         $db->exec("ALTER TABLE dangbai_chothuetro MODIFY COLUMN trangthai_phong ENUM('con_phong','da_coc','da_thue') DEFAULT 'con_phong'");
     } catch (Exception $e) {}
 
+    // Bổ sung các cột toạ độ và video của bài đăng chủ nhà
+    try { $db->exec("ALTER TABLE dangbai_chothuetro ADD COLUMN lat DECIMAL(10, 8) DEFAULT 18.6923405"); } catch (Exception $e) {}
+    try { $db->exec("ALTER TABLE dangbai_chothuetro ADD COLUMN lng DECIMAL(11, 8) DEFAULT 105.681627"); } catch (Exception $e) {}
+    try { $db->exec("ALTER TABLE dangbai_chothuetro ADD COLUMN video VARCHAR(255) DEFAULT ''"); } catch (Exception $e) {}
+
     $done = true;
 }
 
@@ -68,6 +73,13 @@ function ensurePhongtroRoomStatusSchema(PDO $db): void
     try {
         $db->exec("ALTER TABLE phongtro MODIFY COLUMN trangthai ENUM('con_phong','da_coc','da_thue') DEFAULT 'con_phong'");
     } catch (Exception $e) {}
+
+    // Bổ sung các cột toạ độ, video và thông tin chủ nhà cho bảng phongtro
+    try { $db->exec("ALTER TABLE phongtro ADD COLUMN ten_chunha VARCHAR(100) DEFAULT ''"); } catch (Exception $e) {}
+    try { $db->exec("ALTER TABLE phongtro ADD COLUMN sdt_chunha VARCHAR(20) DEFAULT ''"); } catch (Exception $e) {}
+    try { $db->exec("ALTER TABLE phongtro ADD COLUMN video VARCHAR(255) DEFAULT ''"); } catch (Exception $e) {}
+    try { $db->exec("ALTER TABLE phongtro ADD COLUMN lat DECIMAL(10, 8) DEFAULT 18.6923405"); } catch (Exception $e) {}
+    try { $db->exec("ALTER TABLE phongtro ADD COLUMN lng DECIMAL(11, 8) DEFAULT 105.681627"); } catch (Exception $e) {}
 
     $done = true;
 }

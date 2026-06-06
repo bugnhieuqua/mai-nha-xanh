@@ -18,14 +18,7 @@ $database = new Database();
 $db = $database -> getConnection();
 ensureRoomStatusSchema($db);
 
-// Tự động thêm cột nếu chưa có
-try { $db->exec("ALTER TABLE phongtro ADD COLUMN ten_chunha VARCHAR(100) DEFAULT ''"); } catch (Exception $e) {}
-try { $db->exec("ALTER TABLE phongtro ADD COLUMN sdt_chunha VARCHAR(20) DEFAULT ''"); } catch (Exception $e) {}
-try { $db->exec("ALTER TABLE phongtro ADD COLUMN video VARCHAR(255) DEFAULT ''"); } catch (Exception $e) {}
-try { $db->exec("ALTER TABLE phongtro ADD COLUMN lat DECIMAL(10, 8) DEFAULT 18.6923405"); } catch (Exception $e) {}
-try { $db->exec("ALTER TABLE phongtro ADD COLUMN lng DECIMAL(11, 8) DEFAULT 105.681627"); } catch (Exception $e) {}
-try { $db->exec("ALTER TABLE dangbai_chothuetro ADD COLUMN lat DECIMAL(10, 8) DEFAULT 18.6923405"); } catch (Exception $e) {}
-try { $db->exec("ALTER TABLE dangbai_chothuetro ADD COLUMN lng DECIMAL(11, 8) DEFAULT 105.681627"); } catch (Exception $e) {}
+
 
 // Lấy danh sách phòng trọ từ bảng phongtro
 $query = "SELECT *, 'phongtro' as nguon FROM phongtro ORDER BY ngaydang DESC";
@@ -35,8 +28,7 @@ $rooms = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Lấy danh sách bài đăng cho thuê (đã duyệt hoặc tất cả)
 try {
-    // Tự động thêm cột video cho dangbai_chothuetro
-    try { $db->exec("ALTER TABLE dangbai_chothuetro ADD COLUMN video VARCHAR(255) DEFAULT ''"); } catch (Exception $e) {}
+
 
     $query2 = "SELECT id, tieude as ten_phong, mota, hinhanh, hinhanh_list, video, gia, dientich, diachi, tiennghi, 
                ten_chunha, sdt_chunha, ngaydang, COALESCE(trangthai_phong, 'con_phong') as trangthai, 
