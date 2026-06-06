@@ -18,13 +18,12 @@ RUN apt-get update && apt-get install -y \
 # Kích hoạt rewrite module của Apache để hỗ trợ tệp .htaccess điều hướng URL
 RUN a2enmod rewrite
 
-# Đảm bảo chỉ có mpm_prefork được kích hoạt để tránh lỗi "More than one MPM loaded"
-RUN a2dismod mpm_event || true
-RUN a2dismod mpm_worker || true
-RUN a2enmod mpm_prefork || true
-
 # Sao chép toàn bộ mã nguồn của dự án vào thư mục gốc Apache
 COPY . /var/www/html/
+
+# Sao chép và cấu hình tập tin entrypoint để xử lý MPM lúc runtime
+COPY entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Tạo các thư mục lưu trữ động và cấp quyền ghi cho Apache
 RUN mkdir -p /var/www/html/logs /var/www/html/assets/cache /var/www/html/uploads \
@@ -41,4 +40,5 @@ ENV PORT=80
 
 EXPOSE 80
 
+ENTRYPOINT ["entrypoint.sh"]
 CMD ["apache2-foreground"]
