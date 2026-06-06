@@ -95,7 +95,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         $now = time();
         if (isset($_SESSION['login_lockout_time']) && $now < $_SESSION['login_lockout_time']) {
-            $retryAfter = $_SESSION[1021844138155-9c4lqqh7i4uo3vjji19ttclmt6hj03au.apps.googleusercontent.com.'login_lockout_time'] - $now;
+            $retryAfter = $_SESSION['login_lockout_time'] - $now;
             $message = "Bạn đã nhập sai 3 lần. Vui lòng thử lại sau {$retryAfter} giây.";
             $messageType = 'error';
         } else {
