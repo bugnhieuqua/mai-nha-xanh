@@ -58,8 +58,8 @@
         }
       },
       "post": {
-        "summary": "Đăng nhập hoặc Đăng xuất",
-        "description": "Hỗ trợ hành động `login` (đăng nhập) hoặc `logout` (đăng xuất) dựa trên tham số query `action`.",
+        "summary": "Đăng nhập, Đăng xuất hoặc Đăng ký",
+        "description": "Hỗ trợ hành động `login` (đăng nhập), `logout` (đăng xuất) hoặc `register` (đăng ký tài khoản) dựa trên tham số query `action`.",
         "parameters": [
           {
             "name": "action",
@@ -67,9 +67,9 @@
             "required": true,
             "schema": {
               "type": "string",
-              "enum": ["login", "logout"]
+              "enum": ["login", "logout", "register"]
             },
-            "description": "Hành động đăng nhập hoặc đăng xuất"
+            "description": "Hành động đăng nhập, đăng xuất hoặc đăng ký tài khoản mới"
           },
           {
             "name": "X-CSRF-TOKEN",
@@ -82,7 +82,7 @@
           }
         ],
         "requestBody": {
-          "description": "Thông tin tài khoản đăng nhập (Chỉ yêu cầu khi action = login)",
+          "description": "Thông tin tài khoản đăng nhập (khi action = login) hoặc đăng ký (khi action = register)",
           "content": {
             "application/json": {
               "schema": {
@@ -97,9 +97,24 @@
                     "type": "string",
                     "default": "123456"
                   },
+                  "email": {
+                    "type": "string",
+                    "description": "Địa chỉ email (Chỉ yêu cầu khi action = register)",
+                    "example": "chutro01@gmail.com"
+                  },
+                  "hoten": {
+                    "type": "string",
+                    "description": "Họ và tên (Tùy chọn khi action = register)",
+                    "example": "Nguyễn Văn A"
+                  },
+                  "avatar": {
+                    "type": "string",
+                    "description": "Đường dẫn ảnh đại diện (Tùy chọn khi action = register)",
+                    "example": "uploads/avatars/default.png"
+                  },
                   "role": {
                     "type": "string",
-                    "description": "Vai trò muốn gán cho phiên (Mặc định tự động lấy theo CSDL nếu để trống)",
+                    "description": "Vai trò muốn gán cho phiên khi đăng nhập (Mặc định tự động lấy theo CSDL nếu để trống)",
                     "default": "user",
                     "enum": ["user", "admin"]
                   }
@@ -120,9 +135,24 @@
                     "type": "string",
                     "default": "123456"
                   },
+                  "email": {
+                    "type": "string",
+                    "description": "Địa chỉ email (Chỉ yêu cầu khi action = register)",
+                    "example": "chutro01@gmail.com"
+                  },
+                  "hoten": {
+                    "type": "string",
+                    "description": "Họ và tên (Tùy chọn khi action = register)",
+                    "example": "Nguyễn Văn A"
+                  },
+                  "avatar": {
+                    "type": "string",
+                    "description": "Đường dẫn ảnh đại diện (Tùy chọn khi action = register)",
+                    "example": "uploads/avatars/default.png"
+                  },
                   "role": {
                     "type": "string",
-                    "description": "Vai trò muốn gán cho phiên (Mặc định tự động lấy theo CSDL nếu để trống)",
+                    "description": "Vai trò muốn gán cho phiên khi đăng nhập (Mặc định tự động lấy theo CSDL nếu để trống)",
                     "default": "user",
                     "enum": ["user", "admin"]
                   }
@@ -134,7 +164,7 @@
         },
         "responses": {
           "200": {
-            "description": "Thực hiện thành công",
+            "description": "Thực hiện đăng nhập/đăng xuất thành công",
             "content": {
               "application/json": {
                 "schema": {
@@ -155,8 +185,33 @@
               }
             }
           },
+          "201": {
+            "description": "Đăng ký tài khoản thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "code": { "type": "integer", "example": 201 },
+                    "message": { "type": "string", "example": "Đăng ký tài khoản thành công!" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "integer", "example": 12 },
+                        "username": { "type": "string", "example": "newuser" },
+                        "email": { "type": "string", "example": "newuser@example.com" },
+                        "hoten": { "type": "string", "example": "Nguyễn Văn A" },
+                        "avatar": { "type": "string", "example": "uploads/avatars/default.png" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
           "400": {
-            "description": "Thiếu thông tin yêu cầu",
+            "description": "Thiếu thông tin yêu cầu hoặc định dạng không hợp lệ",
             "content": {
               "application/json": {
                 "schema": {
@@ -164,14 +219,14 @@
                   "properties": {
                     "success": { "type": "boolean", "example": false },
                     "code": { "type": "integer", "example": 400 },
-                    "message": { "type": "string", "example": "Thiếu thông tin đăng nhập" }
+                    "message": { "type": "string", "example": "Tên đăng nhập, mật khẩu và email không được để trống." }
                   }
                 }
               }
             }
           },
           "401": {
-            "description": "Sai thông tin tài khoản hoặc mật khẩu",
+            "description": "Sai thông tin tài khoản hoặc mật khẩu đăng nhập",
             "content": {
               "application/json": {
                 "schema": {
@@ -180,6 +235,21 @@
                     "success": { "type": "boolean", "example": false },
                     "code": { "type": "integer", "example": 401 },
                     "message": { "type": "string", "example": "Tài khoản hoặc mật khẩu không chính xác!" }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Tên đăng nhập hoặc Email đã tồn tại",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": false },
+                    "code": { "type": "integer", "example": 409 },
+                    "message": { "type": "string", "example": "Tên đăng nhập đã tồn tại! Vui lòng chọn tên đăng nhập khác." }
                   }
                 }
               }

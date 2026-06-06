@@ -42,17 +42,17 @@ include 'includes/header.php';
     <div class="gallery-container">
         <div class="gallery-track">
             <!-- Duplicate images to create seamless loop -->
-            <img src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=60" alt="Room 1">
-            <img src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=60" alt="Room 2">
-            <img src="https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=60" alt="Room 3">
-            <img src="https://images.unsplash.com/photo-1513694203232-719a280e022f?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=60" alt="Room 5">
+            <img src="assets/images/rooms/phong-1.jpg" alt="Room 1">
+            <img src="assets/images/rooms/phong-2.jpg" alt="Room 2">
+            <img src="assets/images/rooms/phong-3.jpg" alt="Room 3">
+            <img src="assets/images/rooms/phong-5.jpg" alt="Room 5">
             <!-- Duplicate set for seamless loop -->
-            <img src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=60" alt="Room 1">
-            <img src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=60" alt="Room 2">
-            <img src="https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=60" alt="Room 3">
-            <img src="https://images.unsplash.com/photo-1484154218962-a1c00207bf9a?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=60" alt="Room 4">
-            <img src="https://images.unsplash.com/photo-1513694203232-719a280e022f?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=60" alt="Room 5">
-            <img src="https://images.unsplash.com/photo-1522771753035-1a5b6562f3bd?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=60" alt="Room 6">
+            <img src="assets/images/rooms/phong-1.jpg" alt="Room 1">
+            <img src="assets/images/rooms/phong-2.jpg" alt="Room 2">
+            <img src="assets/images/rooms/phong-3.jpg" alt="Room 3">
+            <img src="assets/images/rooms/phong-4.jpg" alt="Room 4">
+            <img src="assets/images/rooms/phong-5.jpg" alt="Room 5">
+            <img src="assets/images/rooms/phong-2.jpg" alt="Room 6">
         </div>
     </div>
 </section>

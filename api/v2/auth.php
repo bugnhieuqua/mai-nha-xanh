@@ -176,6 +176,124 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'message' => 'Lỗi hệ thống: ' . $e->getMessage()
             ]);
         }
+    } elseif ($action === 'register') {
+        // Rate Limiting — Chống spam đăng ký: tối đa 5 request POST / 1 phút per IP
+        require_once __DIR__ . '/../rate_limit.php';
+        checkRateLimit('api_register', 5, 60);
+
+        // Đọc dữ liệu từ cả POST form và JSON input
+        $input = [];
+        if (strpos($_SERVER['CONTENT_TYPE'] ?? '', 'application/json') !== false) {
+            $input = json_decode(file_get_contents('php://input'), true) ?? [];
+        } else {
+            $input = $_POST;
+        }
+
+        $username = trim($input['username'] ?? $input['reg_username'] ?? '');
+        $password = $input['password'] ?? $input['reg_password'] ?? '';
+        $email = trim($input['email'] ?? $input['reg_email'] ?? '');
+        $hoten = trim($input['hoten'] ?? '');
+        $avatar = trim($input['avatar'] ?? '');
+
+        if (empty($username) || empty($password) || empty($email)) {
+            http_response_code(400);
+            echo json_encode([
+                'success' => false,
+                'code' => 400,
+                'message' => 'Tên đăng nhập, mật khẩu và email không được để trống.'
+            ]);
+            exit;
+        }
+
+        // Validate email format
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            http_response_code(400);
+            echo json_encode([
+                'success' => false,
+                'code' => 400,
+                'message' => 'Định dạng email không hợp lệ.'
+            ]);
+            exit;
+        }
+
+        try {
+            $db = getDB();
+            // Kiểm tra trùng username VÀ email cùng lúc
+            $check_stmt = $db->prepare("SELECT username, email FROM users WHERE username = :username OR email = :email LIMIT 2");
+            $check_stmt->execute([':username' => $username, ':email' => $email]);
+            $existing = $check_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $usernameExists = false;
+            $emailExists = false;
+            foreach ($existing as $row) {
+                if ($row['username'] === $username) {
+                    $usernameExists = true;
+                }
+                if ($row['email'] === $email) {
+                    $emailExists = true;
+                }
+            }
+
+            if ($usernameExists) {
+                http_response_code(409);
+                echo json_encode([
+                    'success' => false,
+                    'code' => 409,
+                    'message' => 'Tên đăng nhập đã tồn tại! Vui lòng chọn tên đăng nhập khác.'
+                ]);
+                exit;
+            } elseif ($emailExists) {
+                http_response_code(409);
+                echo json_encode([
+                    'success' => false,
+                    'code' => 409,
+                    'message' => 'Email này đã được sử dụng! Vui lòng dùng địa chỉ email khác.'
+                ]);
+                exit;
+            }
+
+            // Thêm tài khoản mới vào database
+            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+            $stmt = $db->prepare("INSERT INTO users (username, password, email, hoten, avatar, role, status) VALUES (:username, :password, :email, :hoten, :avatar, 'user', 'active')");
+            $result = $stmt->execute([
+                ':username' => $username,
+                ':password' => $hashed_password,
+                ':email' => $email,
+                ':hoten' => $hoten,
+                ':avatar' => $avatar
+            ]);
+
+            if ($result) {
+                $newUserId = $db->lastInsertId();
+                http_response_code(201);
+                echo json_encode([
+                    'success' => true,
+                    'code' => 201,
+                    'message' => 'Đăng ký tài khoản thành công!',
+                    'data' => [
+                        'id' => (int)$newUserId,
+                        'username' => $username,
+                        'email' => $email,
+                        'hoten' => $hoten,
+                        'avatar' => $avatar
+                    ]
+                ]);
+            } else {
+                http_response_code(500);
+                echo json_encode([
+                    'success' => false,
+                    'code' => 500,
+                    'message' => 'Có lỗi xảy ra khi tạo tài khoản, vui lòng thử lại.'
+                ]);
+            }
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'code' => 500,
+                'message' => 'Lỗi hệ thống: ' . $e->getMessage()
+            ]);
+        }
     } elseif ($action === 'logout') {
         validateCsrfToken();
         
