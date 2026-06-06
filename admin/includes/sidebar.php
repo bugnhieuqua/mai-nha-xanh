@@ -140,6 +140,9 @@ $sidebar_initial = strtoupper(function_exists('mb_substr')
         const formData = new FormData();
         formData.append('avatar', input.files[0]);
         formData.append('action', 'update_avatar');
+        // CSRF token (API yêu cầu)
+        const CSRF_TOKEN = '<?= $_SESSION['csrf_token'] ?? '' ?>';
+        if (CSRF_TOKEN) formData.append('csrf_token', CSRF_TOKEN);
 
         try {
             // Sử dụng SweetAlert2 để thông báo nếu có sẵn

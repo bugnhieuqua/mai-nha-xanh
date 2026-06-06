@@ -381,7 +381,12 @@
                                 
                                 const fd = new FormData();
                                 fd.append('avatar', file);
-                                
+
+                                // CSRF token (API yêu cầu)
+                                const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+                                const csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
+                                if (csrfToken) fd.append('csrf_token', csrfToken);
+
                                 try {
                                     const res = await fetch('api/upload_avatar.php', {
                                         method: 'POST',
