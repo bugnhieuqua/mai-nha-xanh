@@ -402,6 +402,7 @@ $total_contacts = (int) $stmt->fetchColumn();
                 if (d.success) {
                     Swal.fire('Đã xóa', d.message, 'success');
                     loadContacts(currentPage);
+                    if (window.globalAdminPoll) window.globalAdminPoll();
                 } else {
                     Swal.fire('Lỗi', d.message || 'Xảy ra lỗi', 'error');
                     console.error('Delete failed:', d, text);
@@ -467,6 +468,7 @@ $total_contacts = (int) $stmt->fetchColumn();
                 });
                 const row = document.getElementById(`row-lh-${id}`);
                 if (row) { const b = row.querySelector('.badge-danger'); if (b) b.remove(); }
+                if (window.globalAdminPoll) window.globalAdminPoll();
             } catch (e) { }
         }
 

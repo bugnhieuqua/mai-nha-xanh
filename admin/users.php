@@ -134,10 +134,23 @@ async function loadUsers(page = 1) {
         });
         tbody.innerHTML = html;
         renderPagination(data);
+        
+        // Instantly poll to refresh sidebar badges (so "new" indicator disappears immediately)
+        if (window.globalAdminPoll) {
+            window.globalAdminPoll();
+        }
     } catch(e) {
         tbody.innerHTML = `<tr><td colspan="6" style="color:var(--danger);text-align:center;padding:40px;">Lỗi kết nối máy chủ</td></tr>`;
     }
 }
+
+window.addEventListener('adminNotifUpdate', (e) => {
+    try {
+        if (e.detail && e.detail.users_new > 0) {
+            loadUsers(currentPage);
+        }
+    } catch(err) {}
+});
 
 function renderPagination(data) {
     const pc = document.getElementById('paginationContainer');

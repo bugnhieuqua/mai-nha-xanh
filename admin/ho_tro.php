@@ -323,6 +323,18 @@ window.addEventListener('DOMContentLoaded', () => {
     setInterval(loadSessions, 3000);
 });
 
+// React to global notifications poller to load support chat sessions instantly
+window.addEventListener('adminNotifUpdate', (e) => {
+    try {
+        if (e.detail && e.detail.support_new > 0) {
+            loadSessions();
+            if (currentSession) {
+                loadMessages();
+            }
+        }
+    } catch(err) {}
+});
+
 async function loadSessions() {
     const el = document.getElementById('sessionItems');
     try {

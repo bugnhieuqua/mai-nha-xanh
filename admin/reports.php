@@ -122,6 +122,14 @@ const CSRF_TOKEN = <?= json_encode($_SESSION['csrf_token'] ?? '') ?>;
 let currentPage = 1;
 window.addEventListener('DOMContentLoaded', () => loadReports(1));
 
+window.addEventListener('adminNotifUpdate', (e) => {
+    try {
+        if (e.detail && e.detail.reports_new > 0) {
+            loadReports(currentPage);
+        }
+    } catch(err) {}
+});
+
 async function loadReports(page = 1) {
     currentPage = page;
     const qs = new URLSearchParams({ action: 'list', page }).toString();
@@ -171,6 +179,7 @@ async function loadReports(page = 1) {
         });
         document.getElementById('reportList').innerHTML = html;
         renderPagination(data);
+        if (window.globalAdminPoll) window.globalAdminPoll();
     } catch(e) {
         document.getElementById('reportList').innerHTML = '<tr><td colspan="6" style="color:var(--danger);text-align:center;padding:20px;">Lỗi kết nối máy chủ</td></tr>';
     }

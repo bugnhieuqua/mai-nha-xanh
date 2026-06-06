@@ -449,6 +449,60 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// --- Dynamic Real-time Dashboard Updates ---
+async function refreshDashboard() {
+    try {
+        const res = await fetch(window.location.href, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        const htmlText = await res.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(htmlText, 'text/html');
+        
+        // Swap stats-grid
+        const newStatsGrid = doc.querySelector('.stats-grid');
+        const currentStatsGrid = document.querySelector('.stats-grid');
+        if (newStatsGrid && currentStatsGrid) {
+            currentStatsGrid.innerHTML = newStatsGrid.innerHTML;
+        }
+        
+        // Swap dashboard-content-grid (recent posts table & mini chatbot sessions list)
+        const newContentGrid = doc.querySelector('.dashboard-content-grid');
+        const currentContentGrid = document.querySelector('.dashboard-content-grid');
+        if (newContentGrid && currentContentGrid) {
+            currentContentGrid.innerHTML = newContentGrid.innerHTML;
+        }
+    } catch(e) {
+        console.error("Dashboard dynamic refresh failed:", e);
+    }
+}
+
+let lastNotifState = {};
+window.addEventListener('adminNotifUpdate', (e) => {
+    try {
+        if (e.detail) {
+            const data = e.detail;
+            const changed = lastNotifState.pending_posts !== data.pending_posts ||
+                            lastNotifState.contact_new !== data.contact_new ||
+                            lastNotifState.support_new !== data.support_new ||
+                            lastNotifState.reports_new !== data.reports_new ||
+                            lastNotifState.users_new !== data.users_new ||
+                            lastNotifState.community_new !== data.community_new ||
+                            lastNotifState.tinnhan_new !== data.tinnhan_new;
+            if (changed) {
+                refreshDashboard();
+            }
+            lastNotifState = {
+                pending_posts: data.pending_posts,
+                contact_new: data.contact_new,
+                support_new: data.support_new,
+                reports_new: data.reports_new,
+                users_new: data.users_new,
+                community_new: data.community_new,
+                tinnhan_new: data.tinnhan_new
+            };
+        }
+    } catch(err) {}
+});
 </script>
 <script src="assets/js/admin-notifications.js"></script>
 </body>

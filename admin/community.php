@@ -96,12 +96,23 @@ try {
 const CSRF_TOKEN = <?= json_encode($_SESSION['csrf_token'] ?? '') ?>;
 window.addEventListener('DOMContentLoaded', loadPosts);
 
+window.addEventListener('adminNotifUpdate', (e) => {
+    try {
+        if (e.detail && e.detail.community_new > 0) {
+            loadPosts();
+        }
+    } catch(err) {}
+});
+
 async function loadPosts() {
     try {
         const res = await fetch('../api/community.php?action=list_posts');
         const data = await res.json();
         const container = document.getElementById('postsContainer');
         if (!data.success) { container.innerHTML = `<div class="card" style="padding:40px; text-align:center; color:var(--danger);">${data.message}</div>`; return; }
+        if (window.globalAdminPoll) {
+            window.globalAdminPoll();
+        }
         if (!data.data.length) { container.innerHTML = `<div class="card" style="padding:60px; text-align:center; color:var(--text-muted);"><i class="fas fa-ghost fa-3x" style="opacity:0.1; margin-bottom:20px;"></i><p>Chưa có bài viết nào.</p></div>`; return; }
 
         let html = '';

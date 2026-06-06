@@ -299,6 +299,7 @@ $sidebar_initial = strtoupper(function_exists('mb_substr')
         } catch (e) { }
     }
 
+    window.globalAdminPoll = globalAdminPoll;
     globalAdminPoll();
-    setInterval(globalAdminPoll, 10000);
+    setInterval(globalAdminPoll, 2000);
 </script>

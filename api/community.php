@@ -135,6 +135,9 @@ switch ($action) {
     // ════════════════════════════════════════════════════════════
     case 'list_posts':
         try {
+            if ($role === 'admin') {
+                try { $db->exec("UPDATE community_posts SET admin_seen = 1 WHERE admin_seen = 0"); } catch (Exception $e) {}
+            }
             $page   = max(1, (int)($_GET['page'] ?? 1));
             $limit  = 10;
             $offset = ($page - 1) * $limit;

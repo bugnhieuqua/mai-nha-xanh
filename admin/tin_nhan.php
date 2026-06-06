@@ -176,6 +176,15 @@ window.addEventListener('DOMContentLoaded', () => {
     markAllHistoryRead();
 });
 
+window.addEventListener('adminNotifUpdate', (e) => {
+    try {
+        if (e.detail && e.detail.tinnhan_new > 0) {
+            loadChats(currentPage);
+            markAllHistoryRead();
+        }
+    } catch(err) {}
+});
+
 async function markAllHistoryRead() {
     try {
         await fetch('../api/admin_ho_tro_mark_read.php', {
@@ -245,6 +254,7 @@ async function loadChats(page = 1) {
         });
         container.innerHTML = html;
         renderPagination(data);
+        if (window.globalAdminPoll) window.globalAdminPoll();
     } catch(e) { container.innerHTML = `<div class="card" style="padding:40px; text-align:center; color:var(--danger);">Lỗi kết nối máy chủ</div>`; }
 }
 

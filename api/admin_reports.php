@@ -31,6 +31,7 @@ try {
     $action = $_GET['action'] ?? $_POST['action'] ?? 'list';
 
     if ($action === 'list') {
+        try { $db->exec("UPDATE reports SET admin_seen = 1 WHERE admin_seen = 0"); } catch (Exception $e) {}
         $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
         $limit = 15;
         $offset = ($page - 1) * $limit;

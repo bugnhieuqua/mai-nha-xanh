@@ -320,6 +320,168 @@ $tab_counts = [
 
 <script>
 const CSRF_TOKEN = <?= json_encode($_SESSION['csrf_token'] ?? '') ?>;
+
+// --- AJAX dynamic reloading for posts ---
+async function navigateToUrl(url) {
+    try {
+        const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        const htmlText = await res.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(htmlText, 'text/html');
+        
+        // Swap out the table content
+        const newTable = doc.querySelector('.table-wrapper');
+        const currentTable = document.querySelector('.table-wrapper');
+        if (newTable && currentTable) {
+            currentTable.innerHTML = newTable.innerHTML;
+        } else if (newTable && !currentTable) {
+            const card = document.querySelector('.card');
+            if (card) {
+                const empty = card.querySelector('.empty-state');
+                if (empty) empty.remove();
+                const tableWrapper = document.createElement('div');
+                tableWrapper.className = 'table-wrapper';
+                tableWrapper.innerHTML = newTable.innerHTML;
+                const filterBar = card.querySelector('.filter-bar');
+                if (filterBar) {
+                    filterBar.parentNode.insertBefore(tableWrapper, filterBar.nextSibling);
+                } else {
+                    card.appendChild(tableWrapper);
+                }
+            }
+        } else if (!newTable && currentTable) {
+            currentTable.remove();
+            const newEmpty = doc.querySelector('.empty-state');
+            if (newEmpty) {
+                const card = document.querySelector('.card');
+                if (card) card.appendChild(newEmpty.cloneNode(true));
+            }
+        }
+        
+        // Swap out pagination
+        const newPagination = doc.querySelector('.pagination');
+        const currentPagination = document.querySelector('.pagination');
+        if (newPagination && currentPagination) {
+            currentPagination.innerHTML = newPagination.innerHTML;
+            currentPagination.style.display = newPagination.style.display;
+        } else if (newPagination && !currentPagination) {
+            const card = document.querySelector('.card');
+            if (card) {
+                const pagDiv = document.createElement('div');
+                pagDiv.className = 'pagination';
+                pagDiv.innerHTML = newPagination.innerHTML;
+                pagDiv.style.display = newPagination.style.display;
+                card.appendChild(pagDiv);
+            }
+        } else if (!newPagination && currentPagination) {
+            currentPagination.remove();
+        }
+        
+        // Swap out bulk action bar
+        const newBulkBar = doc.querySelector('.bulk-action-bar');
+        const currentBulkBar = document.querySelector('.bulk-action-bar');
+        if (newBulkBar && currentBulkBar) {
+            currentBulkBar.innerHTML = newBulkBar.innerHTML;
+            currentBulkBar.style.display = newBulkBar.style.display;
+        } else if (newBulkBar && !currentBulkBar) {
+            const tableWrapper = document.querySelector('.table-wrapper');
+            if (tableWrapper) {
+                const bulkDiv = document.createElement('div');
+                bulkDiv.className = 'bulk-action-bar';
+                bulkDiv.style.cssText = newBulkBar.style.cssText;
+                bulkDiv.innerHTML = newBulkBar.innerHTML;
+                tableWrapper.parentNode.insertBefore(bulkDiv, tableWrapper);
+            }
+        } else if (!newBulkBar && currentBulkBar) {
+            currentBulkBar.remove();
+        }
+        
+        // Update tab badges
+        const newTabs = doc.querySelectorAll('.admin-content > div:first-child a');
+        const currentTabs = document.querySelectorAll('.admin-content > div:first-child a');
+        if (newTabs.length && currentTabs.length) {
+            currentTabs.forEach((tab, index) => {
+                if (newTabs[index]) {
+                    tab.className = newTabs[index].className;
+                    tab.style.cssText = newTabs[index].style.cssText;
+                    const badge = tab.querySelector('.nav-badge');
+                    const newBadge = newTabs[index].querySelector('.nav-badge');
+                    if (badge && newBadge) {
+                        badge.textContent = newBadge.textContent;
+                    }
+                }
+            });
+        }
+        
+        onPostCheckChange();
+        wireDynamicEvents();
+        
+        if (window.globalAdminPoll) {
+            window.globalAdminPoll();
+        }
+    } catch (e) {
+        console.error("AJAX navigation failed, falling back to location reload.", e);
+        window.location.reload();
+    }
+}
+
+function wireDynamicEvents() {
+    document.querySelectorAll('.pagination a').forEach(a => {
+        if (a.dataset.wired) return;
+        a.dataset.wired = 'true';
+        a.addEventListener('click', (e) => {
+            e.preventDefault();
+            const url = a.getAttribute('href');
+            history.pushState(null, '', url);
+            navigateToUrl(url);
+        });
+    });
+    
+    document.querySelectorAll('.admin-content > div:first-child a').forEach(a => {
+        if (a.dataset.wired) return;
+        a.dataset.wired = 'true';
+        a.addEventListener('click', (e) => {
+            e.preventDefault();
+            const url = a.getAttribute('href');
+            history.pushState(null, '', url);
+            navigateToUrl(url);
+        });
+    });
+}
+
+document.addEventListener('submit', (e) => {
+    if (e.target.matches('form.filter-bar')) {
+        e.preventDefault();
+        const form = e.target;
+        const formData = new FormData(form);
+        const searchParams = new URLSearchParams(formData);
+        const url = '?' + searchParams.toString();
+        history.pushState(null, '', url);
+        navigateToUrl(url);
+    }
+});
+
+window.addEventListener('popstate', () => {
+    navigateToUrl(window.location.href);
+});
+
+// Realtime dynamic notification update listener
+let lastPendingCount = null;
+window.addEventListener('adminNotifUpdate', (e) => {
+    try {
+        if (e.detail && e.detail.pending_posts !== undefined) {
+            if (lastPendingCount !== null && e.detail.pending_posts !== lastPendingCount) {
+                navigateToUrl(window.location.href);
+            }
+            lastPendingCount = e.detail.pending_posts;
+        }
+    } catch(err) {}
+});
+
+window.addEventListener('DOMContentLoaded', () => {
+    wireDynamicEvents();
+});
+
 // --- Real-time feedback using Swal & Custom Toasts ---
 function showToast(msg, type='success') {
     Swal.fire({
@@ -373,7 +535,7 @@ async function bulkDeletePosts() {
         });
         const data = await res.json();
         if (data.success) {
-            Swal.fire('Thành công', data.message, 'success').then(() => location.reload());
+            Swal.fire('Thành công', data.message, 'success').then(() => navigateToUrl(window.location.href));
         }
     }
 }
@@ -399,7 +561,7 @@ async function bulkApprovePosts() {
         });
         const data = await res.json();
         if (data.success) {
-            Swal.fire('Đã duyệt', data.message, 'success').then(() => location.reload());
+            Swal.fire('Đã duyệt', data.message, 'success').then(() => navigateToUrl(window.location.href));
         }
     }
 }
@@ -434,9 +596,9 @@ async function handlePost(id, action, note='') {
             showToast(data.message);
             if (action === 'delete') {
                 document.getElementById('row-' + id)?.remove();
+                if (window.globalAdminPoll) window.globalAdminPoll();
             } else {
-                // Refresh inline or reload
-                setTimeout(() => location.reload(), 1000);
+                setTimeout(() => navigateToUrl(window.location.href), 1000);
             }
             closeModal('viewModal');
             closeModal('rejectModal');
@@ -485,7 +647,7 @@ async function runAiCheckInline(id, e) {
         });
         const data = await res.json();
         if (data.success) {
-            Swal.fire('Thành công', data.message, 'success').then(() => location.reload());
+            Swal.fire('Thành công', data.message, 'success').then(() => navigateToUrl(window.location.href));
         } else {
             Swal.fire('Lỗi', data.message, 'error');
         }
