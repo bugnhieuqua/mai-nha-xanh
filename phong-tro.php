@@ -608,9 +608,13 @@ sort($locations);
 
 
 <!-- Room Details Modal -->
-<div id="roomDetailsModal" class="modal-overlay" onclick="if(event.target===this) closeRoomDetails()" style="z-index: 9998; opacity: 0; pointer-events: none; transition: opacity 0.3s; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.6); position: fixed; top: 0; left: 0; right: 0; bottom: 0;">
+<div id="roomDetailsModal" class="modal-overlay" onclick="if(event.target===this) closeRoomDetails()" style="z-index: 10005; opacity: 0; pointer-events: none; transition: opacity 0.3s; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.6); position: fixed; top: 0; left: 0; right: 0; bottom: 0;">
+    <!-- Mobile Close Button -->
+    <button class="modal-close-btn mobile-close-btn" onclick="closeRoomDetails()"><i class="fas fa-times"></i></button>
+    
     <div class="modal-box" style="background: white; border-radius: 15px; max-width: 600px; width: 95%; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.2); transform: translateY(-20px); transition: transform 0.3s; position: relative;">
-        <button class="modal-close-btn" onclick="closeRoomDetails()" style="position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.5); border: none; font-size: 1.5rem; cursor: pointer; color: white; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; z-index: 10;"><i class="fas fa-times"></i></button>
+        <!-- Desktop Close Button -->
+        <button class="modal-close-btn desktop-close-btn" onclick="closeRoomDetails()" style="position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.5); border: none; font-size: 1.5rem; cursor: pointer; color: white; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; z-index: 10;"><i class="fas fa-times"></i></button>
 
         <div style="background:#0f172a; padding:12px 12px 8px; border-top-left-radius:15px; border-top-right-radius:15px;">
             <img id="rdImage" src="" onclick="openMediaLightbox()" style="width: 100%; height: 360px; object-fit: contain; border-radius: 10px; background:#000; cursor:zoom-in;" alt="Hình ảnh">
@@ -976,11 +980,15 @@ function closeRoomDetails() {
 </div>
 
 <!-- Booking Modal -->
-<div id="bookingModal" class="modal-overlay" style="z-index: 10001; opacity: 0; pointer-events: none; transition: opacity 0.3s; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.65); position: fixed; top: 0; left: 0; right: 0; bottom: 0;">
+<div id="bookingModal" class="modal-overlay" style="z-index: 10006; opacity: 0; pointer-events: none; transition: opacity 0.3s; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.65); position: fixed; top: 0; left: 0; right: 0; bottom: 0;">
+    <!-- Mobile Close Button -->
+    <button class="modal-close-btn mobile-close-btn" onclick="closeBookingModal()">✕</button>
+    
     <div class="modal-box" style="background:#fff;border-radius:16px;width:95%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.25);position:relative;">
         <div style="background:linear-gradient(135deg,#10b981,#059669);padding:18px 22px;border-radius:16px 16px 0 0;display:flex;justify-content:space-between;align-items:center;">
             <h3 style="color:#fff;margin:0;font-size:1.1rem;"><i class="fas fa-calendar-check"></i> Đặt phòng</h3>
-            <button class="modal-close-btn" onclick="closeBookingModal()" style="background:rgba(255,255,255,.2);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;">✕</button>
+            <!-- Desktop Close Button -->
+            <button class="modal-close-btn desktop-close-btn" onclick="closeBookingModal()" style="background:rgba(255,255,255,.2);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;">✕</button>
         </div>
         <div style="padding:22px;">
             <p id="bk_room_name" style="font-weight:700;font-size:.95rem;color:#1e293b;margin-bottom:16px;padding:10px 14px;background:#f0fdf4;border-radius:8px;border-left:3px solid #10b981;"></p>
@@ -1114,9 +1122,13 @@ document.getElementById('bookingForm').addEventListener('submit', async function
 </script>
 
 <!-- Report Modal -->
-<div id="reportModal" class="modal-overlay" onclick="if(event.target===this) closeReportModal()" style="z-index: 10000; opacity: 0; pointer-events: none; transition: opacity 0.3s; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.6); position: fixed; top: 0; left: 0; right: 0; bottom: 0;">
+<div id="reportModal" class="modal-overlay" onclick="if(event.target===this) closeReportModal()" style="z-index: 10007; opacity: 0; pointer-events: none; transition: opacity 0.3s; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.6); position: fixed; top: 0; left: 0; right: 0; bottom: 0;">
+    <!-- Mobile Close Button -->
+    <button class="modal-close-btn mobile-close-btn" onclick="closeReportModal()"><i class="fas fa-times"></i></button>
+    
     <div class="modal-box" style="background: white; border-radius: 12px; max-width: 400px; width: 90%; padding: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); transform: translateY(-20px); transition: transform 0.3s; position: relative;">
-        <button class="modal-close-btn" onclick="closeReportModal()" style="position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.5); border: none; font-size: 1.5rem; cursor: pointer; color: white; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; z-index: 10;"><i class="fas fa-times"></i></button>
+        <!-- Desktop Close Button -->
+        <button class="modal-close-btn desktop-close-btn" onclick="closeReportModal()" style="position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.5); border: none; font-size: 1.5rem; cursor: pointer; color: white; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; z-index: 10;"><i class="fas fa-times"></i></button>
         <h3 style="margin-top:0; color: #1e293b; font-size: 1.2rem; margin-bottom: 15px;"><i class="fas fa-exclamation-triangle" style="color:#ef4444;"></i> Báo cáo Bài đăng</h3>
         <p style="font-size:0.9rem; color:#64748b; margin-bottom:15px;">Vui lòng cho chúng tôi biết tại sao bạn muốn báo cáo bài đăng này (VD: Tin giả, lừa đảo, số điện thoại sai, v.v.):</p>
         <textarea id="reportReason" style="width: 100%; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; font-size: 0.9rem; min-height: 80px; resize: vertical; margin-bottom: 15px;" placeholder="Nhập lý do..."></textarea>

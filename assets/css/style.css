@@ -2161,6 +2161,11 @@ img {
   height: auto;
 }
 
+/* Hide mobile close button by default on desktop */
+.mobile-close-btn {
+  display: none !important;
+}
+
 @media screen and (max-width: 768px) {
   html,
   body {
@@ -2169,6 +2174,17 @@ img {
   .container {
     width: 100%;
     padding: 0 15px;
+  }
+
+  /* Scale down Page Header (Danh sách phòng trọ,...) on mobile */
+  .page-header {
+    padding: 80px 0 40px !important;
+  }
+  .page-header h1 {
+    font-size: 1.8rem !important;
+  }
+  .page-header p {
+    font-size: 0.9rem !important;
   }
 
   /* Header & Navigation */
@@ -2481,34 +2497,143 @@ img {
     display: none; /* Chrome/Safari */
   }
 
-  /* Full Screen Modals on Mobile (trừ Terms Modal) */
+  /* Card Modals on Mobile (trừ Terms Modal) */
   .modal-overlay:not(#termsModal) .modal-box {
-    width: 100vw !important;
-    max-width: 100vw !important;
-    height: 100vh !important;
-    max-height: 100vh !important;
-    border-radius: 0 !important;
-    transform: translateY(100%) !important;
-    transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+    width: 92% !important;
+    max-width: 500px !important;
+    height: auto !important;
+    max-height: 84vh !important;
+    border-radius: 16px !important;
+    transform: translateY(30px) !important;
+    transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+    margin: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
   }
   .modal-overlay:not(#termsModal)[style*="opacity: 1"] .modal-box {
     transform: translateY(0) !important;
   }
-  /* Sticky Close Button for Full Screen Modals */
-  .modal-close-btn {
-    position: fixed !important;
-    top: 15px !important;
-    right: 15px !important;
-    z-index: 1000 !important;
-    background: rgba(0,0,0,0.5) !important;
-    color: #fff !important;
-    width: 36px !important;
-    height: 36px !important;
-    border-radius: 50% !important;
+
+  /* Scale down Room Details elements on mobile */
+  #roomDetailsModal .modal-box {
+    overflow-y: auto !important;
+  }
+  #roomDetailsModal img#rdImage,
+  #roomDetailsModal video#rdVideo {
+    height: 180px !important;
+    border-radius: 8px !important;
+  }
+  #roomDetailsModal .modal-box > div[style*="padding: 25px"] {
+    padding: 15px !important;
+  }
+  #rdTitle {
+    font-size: 1.2rem !important;
+  }
+  #rdAddress {
+    font-size: 0.82rem !important;
+  }
+  #roomDetailsModal h4 {
+    font-size: 0.92rem !important;
+    margin-top: 10px !important;
+    margin-bottom: 5px !important;
+  }
+  #rdDesc {
+    font-size: 0.85rem !important;
+    line-height: 1.5 !important;
+    margin-bottom: 10px !important;
+  }
+  #rdPrice {
+    font-size: 1.05rem !important;
+  }
+  #rdArea {
+    font-size: 0.95rem !important;
+  }
+  #rdAmenities span {
+    font-size: 0.78rem !important;
+    padding: 4px 8px !important;
+  }
+
+  /* Stack buttons vertically on mobile for Details Modal */
+  #roomDetailsModal .action-buttons-scroll {
     display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    padding-top: 15px !important;
+    overflow: visible !important;
+    flex-wrap: wrap !important;
+  }
+  #roomDetailsModal .action-buttons-scroll > * {
+    width: 100% !important;
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+  }
+  #roomDetailsModal .action-buttons-scroll button,
+  #roomDetailsModal .action-buttons-scroll a {
+    width: 100% !important;
+    padding: 10px !important;
+    font-size: 0.88rem !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Scale down Booking Modal on mobile */
+  #bookingModal .modal-box {
+    max-height: 84vh !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  #bookingModal .modal-box > div[style*="padding:18px 22px"] {
+    padding: 10px 14px !important;
+  }
+  #bookingModal .modal-box > div[style*="padding:22px"] {
+    padding: 15px !important;
+  }
+  #bookingModal form#bookingForm label {
+    font-size: 0.85rem !important;
+    margin-bottom: 4px !important;
+  }
+  #bookingModal form#bookingForm input,
+  #bookingModal form#bookingForm textarea {
+    padding: 8px 12px !important;
+    font-size: 0.9rem !important;
+  }
+  #bookingModal form#bookingForm button[type="submit"] {
+    padding: 10px !important;
+    font-size: 0.9rem !important;
+  }
+
+  /* Scale down Report Modal on mobile */
+  #reportModal .modal-box {
+    padding: 15px !important;
+    max-height: 84vh !important;
+  }
+
+  /* Desktop close buttons hidden on Mobile */
+  .desktop-close-btn {
+    display: none !important;
+  }
+  /* Mobile close buttons floating top right of viewport */
+  .mobile-close-btn {
+    display: flex !important;
+    position: absolute !important;
+    top: 16px !important;
+    right: 16px !important;
+    z-index: 10010 !important;
+    background: rgba(0, 0, 0, 0.6) !important;
+    color: #fff !important;
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 50% !important;
     align-items: center !important;
     justify-content: center !important;
-    font-size: 1.2rem !important;
+    font-size: 1.25rem !important;
+    border: none !important;
+    cursor: pointer !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
+    transition: background 0.2s;
+  }
+  .mobile-close-btn:active {
+    background: rgba(0, 0, 0, 0.8) !important;
   }
 
   /* Filter Toggle Logic */
