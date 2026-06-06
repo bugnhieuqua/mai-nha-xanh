@@ -15,6 +15,7 @@ RewriteRule ^([^\.]+)$ $1.php [L]
 # [3] Chuyển hướng HTTP sang HTTPS (bật nếu host hỗ trợ SSL, loại trừ localhost)
 RewriteCond %{HTTP_HOST} !^localhost$ [NC]
 RewriteCond %{HTTP_HOST} !^127\.0\.0\.1$
+RewriteCond %{HTTP:X-Forwarded-Proto} !https [NC]
 RewriteCond %{HTTPS} off
 RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 # [4] Ép định dạng cho PWA (Sửa lỗi cho Hosting Free)
