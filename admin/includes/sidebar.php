@@ -56,7 +56,7 @@ $sidebar_initial = strtoupper(function_exists('mb_substr')
             class="fas fa-times"></i></button>
     <a href="index.php" class="sidebar-brand">
         <span class="sidebar-brand-shimmer" aria-hidden="true"></span>
-        <img src="../assets/images/logo.png" alt="Logo" onerror="this.style.background='#10b981';this.src=''">
+        <img src="../assets/images/logo-192.png" alt="Logo">
         <div>
             <span>Mái Nhà Xanh</span>
             <small>Quản trị viên</small>
