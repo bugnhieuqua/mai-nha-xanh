@@ -103,7 +103,10 @@ self.addEventListener("fetch", (event) => {
             }
             return response;
           })
-          .catch(() => cached);
+          .catch((err) => {
+            if (cached) return cached;
+            throw err;
+          });
 
         // Return cached immediately, update in background
         return cached || fetchPromise;
