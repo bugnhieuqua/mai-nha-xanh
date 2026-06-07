@@ -156,8 +156,14 @@ if ($curlError) {
 
 if ($httpCode !== 200) {
     error_log("Groq API Error (Round 1): Status code: $httpCode. Response: " . $response);
-    http_response_code($httpCode);
-    echo $response;
+    // Tránh trả về HTML/text từ hosting/gateway khi frontend mong đợi JSON
+    http_response_code(503);
+    echo json_encode([
+
+        'success' => false,
+        'maintenance' => true,
+        'message' => 'Hệ thống AI đang bảo trì. Vui lòng thử lại sau ít phút.'
+    ], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
