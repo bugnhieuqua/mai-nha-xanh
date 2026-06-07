@@ -31,7 +31,7 @@ try {
 
 
     $query2 = "SELECT id, tieude as ten_phong, mota, hinhanh, hinhanh_list, video, gia, dientich, diachi, tiennghi, 
-               ten_chunha, sdt_chunha, ngaydang, COALESCE(trangthai_phong, 'con_phong') as trangthai, 
+               ten_chunha, sdt_chunha, nguoidang, ngaydang, COALESCE(trangthai_phong, 'con_phong') as trangthai, 
                COALESCE(lat, 18.6923405) as lat, COALESCE(lng, 105.681627) as lng, 'dangbai' as nguon 
                FROM dangbai_chothuetro WHERE trangthai = 'da_duyet' ORDER BY ngaydang DESC";
     $stmt2 = $db->prepare($query2);
@@ -258,7 +258,7 @@ sort($locations);
                         position: absolute; 
                         bottom: 20px; 
                         left: 20px; 
-                        z-index: 1000; 
+                        z-index: 99; 
                         width: 70px; 
                         height: 70px; 
                         border: 2px solid #fff; 
@@ -322,6 +322,7 @@ sort($locations);
                             'tiennghi' => explode(',', $room['tiennghi'] ?? ''),
                             'ten_chunha' => $room['ten_chunha'] ?? '',
                             'sdt_chunha' => $room['sdt_chunha'] ?? '',
+                            'nguoidang' => $room['nguoidang'] ?? '',
                             'video' => $room['video'] ?? '',
                             'nguon' => $room['nguon'] ?? 'phongtro',
                             'trangthai' => $room['trangthai'] ?? '',
@@ -653,6 +654,7 @@ sort($locations);
                 <div>
                     <span style="display: block; font-size: 0.78rem; color: #047857; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Chủ phòng trọ</span>
                     <strong id="rdLandlordName" style="color: #064e3b; font-size: 1.05rem; font-weight: 700;">Đang cập nhật...</strong>
+                    <span id="rdLandlordPhone" style="display: block; font-size: 0.9rem; color: #047857; margin-top: 2px; font-weight: 500;"></span>
                 </div>
             </div>
 
@@ -673,6 +675,7 @@ sort($locations);
 </div>
 
 <script>
+const currentUsername = '<?php echo $_SESSION['username'] ?? ''; ?>';
 const ROOM_STATUS_SYNC_KEY = 'mnx_room_status_sync';
 
 function normalizeRoomStatus(st) {
@@ -813,23 +816,19 @@ function applyRoomStatusToModal(data) {
     if (status === 'con_phong') {
         statusEl.textContent = 'Còn phòng';
         statusEl.style.background = '#10b981';
-        contactContainer.innerHTML = `<a href="tel:${sdt.replace(/\s+/g, '')}" class="btn" style="display:block; width:100%; text-align:center; padding:10px; border-radius:8px; font-weight:600; background:#3b82f6; color:white; text-decoration:none;"><i class="fas fa-phone"></i> Liên hệ / Gọi: ${sdt}</a>`;
         bookingBtn.style.display = 'flex';
-        return;
-    }
-
-    if (status === 'da_coc') {
+    } else if (status === 'da_coc') {
         statusEl.textContent = 'Đã đặt cọc';
         statusEl.style.background = '#f59e0b';
-        contactContainer.innerHTML = `<button class="btn" style="display:block; width:100%; text-align:center; padding:10px; border-radius:8px; font-weight:600; background:#f59e0b; color:white; border:none; cursor:not-allowed;" disabled><i class="fas fa-hourglass-half"></i> Phòng đã có người đặt cọc</button>`;
         bookingBtn.style.display = 'none';
-        return;
+    } else {
+        statusEl.textContent = 'Đã thuê';
+        statusEl.style.background = '#ef4444';
+        bookingBtn.style.display = 'none';
     }
 
-    statusEl.textContent = 'Đã thuê';
-    statusEl.style.background = '#ef4444';
-    contactContainer.innerHTML = `<button class="btn" style="display:block; width:100%; text-align:center; padding:10px; border-radius:8px; font-weight:600; background:#94a3b8; color:white; border:none; cursor:not-allowed;" disabled><i class="fas fa-lock"></i> Đã có người thuê</button>`;
-    bookingBtn.style.display = 'none';
+    // Luôn hiển thị số điện thoại chủ trọ để liên hệ
+    contactContainer.innerHTML = `<a href="tel:${sdt.replace(/\s+/g, '')}" class="btn" style="display:block; width:100%; text-align:center; padding:10px; border-radius:8px; font-weight:600; background:#3b82f6; color:white; text-decoration:none;"><i class="fas fa-phone"></i> Liên hệ / Gọi: ${sdt}</a>`;
 }
 
 function applyRoomStatusToCard(card, status) {
@@ -932,6 +931,11 @@ function openRoomDetails(element) {
     document.getElementById('rdArea').textContent = data.dientich;
     document.getElementById('rdDesc').textContent = data.mota || 'Không có mô tả.';
     document.getElementById('rdLandlordName').textContent = data.ten_chunha ? data.ten_chunha : 'Liên hệ ban quản trị';
+    
+    // Điền thông tin số điện thoại chủ nhà ở phần thông tin
+    const sdtVal = data.sdt_chunha ? data.sdt_chunha : '0123 456 789';
+    document.getElementById('rdLandlordPhone').innerHTML = `<i class="fas fa-phone" style="font-size: 0.8rem; margin-right: 4px;"></i> SĐT: <a href="tel:${sdtVal.replace(/\s+/g, '')}" style="color: #047857; text-decoration: underline; font-weight: 700;">${sdtVal}</a>`;
+    
     applyRoomStatusToModal(data);
     
     const amContainer = document.getElementById('rdAmenities');
@@ -1358,6 +1362,9 @@ document.getElementById('bookingForm').addEventListener('submit', async function
                 if (targetCard) {
                     setTimeout(() => {
                         openRoomDetails(targetCard);
+                        // Xoá tham số room_key khỏi URL để tránh việc modal tự động bật lên khi tải lại (refresh) trang
+                        const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+                        window.history.replaceState({ path: cleanUrl }, '', cleanUrl);
                     }, 500);
                 }
             }

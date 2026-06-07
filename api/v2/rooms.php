@@ -278,17 +278,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                         'data' => ['id' => $new_id, 'verdict' => 'SAFE']
                     ]);
                 } elseif ($verdict === 'DANGER') {
-                    // Từ chối tự động
-                    $upd = $db->prepare("UPDATE dangbai_chothuetro SET trangthai = 'tu_choi', admin_note = :note WHERE id = :id");
-                    $upd->execute([
-                        ':note' => 'Tự động từ chối bởi AI. Lý do: ' . $reasonsStr,
-                        ':id' => $new_id
-                    ]);
+                    // Từ chối tự động: xóa khỏi database và xóa các tệp tin để "huỷ, không nhận"
+                    $del = $db->prepare("DELETE FROM dangbai_chothuetro WHERE id = :id");
+                    $del->execute([':id' => $new_id]);
+
+                    foreach ($uploadedImages as $p) {
+                        if (file_exists('../../' . $p)) @unlink('../../' . $p);
+                    }
 
                     echo json_encode([
                         'success' => false,
                         'code' => 422,
-                        'message' => 'Trợ lý AI từ chối bài đăng do vi phạm: ' . $reasonsStr,
+                        'message' => 'Trợ lý AI từ chối bài đăng do vi phạm chính sách: ' . $reasonsStr,
                         'data' => ['id' => $new_id, 'verdict' => 'DANGER', 'reasons' => $reasons]
                     ]);
                 } else {

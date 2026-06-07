@@ -46,7 +46,7 @@ set_error_handler(function ($severity, $message, $file, $line) use ($isDebug) {
     $errorType = match ($severity) {
         E_WARNING => 'WARNING',
         E_NOTICE => 'NOTICE',
-        E_STRICT => 'STRICT',
+        (defined('E_STRICT') ? E_STRICT : -1) => 'STRICT',
         E_DEPRECATED => 'DEPRECATED',
         E_USER_ERROR => 'USER_ERROR',
         E_USER_WARNING => 'USER_WARNING',

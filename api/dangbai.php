@@ -267,16 +267,20 @@ try {
                 ]);
                 exit;
             } elseif ($verdict === 'DANGER') {
-                // Tự động từ chối bài đăng
-                $upd = $db->prepare("UPDATE dangbai_chothuetro SET trangthai = 'tu_choi', admin_note = :note WHERE id = :id");
-                $upd->execute([
-                    ':note' => 'Tự động từ chối bởi AI. Lý do: ' . $reasonsStr,
-                    ':id' => $new_id
-                ]);
+                // Tự động từ chối bài đăng: xóa khỏi database và xóa các tệp tin để "huỷ, không nhận"
+                $del = $db->prepare("DELETE FROM dangbai_chothuetro WHERE id = :id");
+                $del->execute([':id' => $new_id]);
+                
+                foreach ($uploadedImages as $p) {
+                    if (file_exists('../' . $p)) @unlink('../' . $p);
+                }
+                if (!empty($video) && file_exists('../' . $video)) {
+                    @unlink('../' . $video);
+                }
                 
                 echo json_encode([
                     'success' => false,
-                    'message' => 'Đăng bài thất bại! Trợ lý AI từ chối bài viết này do phát hiện rủi ro: ' . $reasonsStr
+                    'message' => 'Đăng bài thất bại! Trợ lý AI từ chối bài viết này do phát hiện rủi ro vi phạm chính sách: ' . $reasonsStr
                 ]);
                 exit;
             } else {

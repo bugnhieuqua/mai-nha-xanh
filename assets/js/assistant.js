@@ -249,33 +249,60 @@ if (!chatBody || !messageInput || !sendMessageButton || !chatbotToggler) {
 
     // Convert [ROOM:source:id] to HTML Card
     const withCards = escaped.replace(/\[ROOM:(phongtro|dangbai):(\d+)\]/g, (match, source, id) => {
-      const card = document.querySelector(`.room-card[data-room-key="[ROOM:${source}:${id}]"]`);
-      if (card) {
+      const cardKey = `[ROOM:${source}:${id}]`;
+      let roomData = null;
+      
+      // 1. Check Cache
+      if (window.chatbotRoomCache && window.chatbotRoomCache[cardKey]) {
+        roomData = window.chatbotRoomCache[cardKey];
+      }
+      
+      // 2. Check DOM (fallback)
+      if (!roomData) {
+        const card = document.querySelector(`.room-card[data-room-key="${cardKey}"]`);
+        if (card) {
+          try {
+            roomData = JSON.parse(card.getAttribute("data-room") || "{}");
+          } catch(e) {}
+        }
+      }
+      
+      if (roomData) {
         try {
-          const roomData = JSON.parse(card.getAttribute("data-room") || "{}");
-          const title = roomData.ten_phong || "Phòng trọ";
-          const price = roomData.gia || "Liên hệ";
+          const title = roomData.ten_phong || roomData.tieude || "Phòng trọ";
+          let priceStr = "Liên hệ";
+          if (roomData.gia) {
+            priceStr = typeof roomData.gia === 'number' 
+              ? roomData.gia.toLocaleString('vi-VN') + 'đ' 
+              : roomData.gia;
+          }
           const image = roomData.hinhanh || "https://via.placeholder.com/400x300?text=Phong+Tro";
           const diachi = roomData.diachi || "";
           
           return `
-            <div class="chatbot-room-card" style="margin: 10px 0; background: var(--white, #fff); border: 1px solid var(--card-border, #e5e7eb); border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.06); font-family: inherit; width: 100%; max-width: 280px; display: inline-block; text-align: left;">
+            <div class="chatbot-room-card" style="margin: 10px 0; background: var(--white, #fff); border: 1px solid var(--card-border, #e5e7eb); border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.06); font-family: inherit; width: 100%; max-width: 280px; display: inline-block; text-align: left; vertical-align: top;">
               <img src="${image}" style="width: 100%; height: 120px; object-fit: cover; display: block;" />
               <div style="padding: 12px;">
-                <h4 style="margin: 0 0 6px 0; font-size: 0.9rem; font-weight: 700; color: var(--text-main, #1e293b); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${title}</h4>
-                <p style="margin: 0 0 8px 0; font-size: 0.75rem; color: var(--gray, #6b7280);"><i class="fas fa-map-marker-alt" style="color: #ef4444; margin-right: 3px;"></i> ${diachi.substring(0, 35)}...</p>
+                <h4 style="margin: 0 0 6px 0; font-size: 0.85rem; font-weight: 700; color: var(--text-main, #1e293b); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${title}</h4>
+                <p style="margin: 0 0 8px 0; font-size: 0.7rem; color: var(--gray, #6b7280);"><i class="fas fa-map-marker-alt" style="color: #ef4444; margin-right: 3px;"></i> ${diachi.substring(0, 35)}...</p>
                 <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--card-border, #e5e7eb); padding-top: 8px; margin-top: 4px;">
-                  <span style="font-weight: 800; color: var(--success, #10b981); font-size: 0.85rem;">${price}</span>
-                  <a href="javascript:void(0)" onclick="openRoomDetailsFromChat('${source}', '${id}')" style="background: linear-gradient(135deg, #10b981, #3b82f6); color: #fff; font-size: 0.75rem; font-weight: 700; padding: 4px 12px; border-radius: 20px; text-decoration: none; box-shadow: 0 3px 8px rgba(16,185,129,0.25);">Chi tiết</a>
+                  <span style="font-weight: 800; color: var(--success, #10b981); font-size: 0.8rem;">${priceStr}</span>
+                  <div style="display: flex; gap: 4px;">
+                    <a href="javascript:void(0)" class="no-tts" onclick="toggleRoomBubbleMap(this, '${source}', '${id}')" style="background: #3b82f6; color: #fff; font-size: 0.65rem; font-weight: 700; padding: 2.5px 7px; border-radius: 20px; text-decoration: none; box-shadow: 0 3px 8px rgba(59,130,246,0.25);">Bản đồ</a>
+                    <a href="javascript:void(0)" class="no-tts" onclick="openRoomDetailsFromChat('${source}', '${id}')" style="background: linear-gradient(135deg, #10b981, #3b82f6); color: #fff; font-size: 0.65rem; font-weight: 700; padding: 2.5px 7px; border-radius: 20px; text-decoration: none; box-shadow: 0 3px 8px rgba(16,185,129,0.25);">Chi tiết</a>
+                  </div>
                 </div>
+                <label class="no-tts" style="display: flex; align-items: center; gap: 6px; font-size: 0.7rem; margin-top: 8px; cursor: pointer; color: #4b5563; font-weight: 600;">
+                  <input type="checkbox" class="compare-checkbox no-tts" data-room-key="${cardKey}" onchange="handleCompareCheckboxChange()" style="cursor: pointer; width: 14px; height: 14px;" /> So sánh phòng
+                </label>
               </div>
             </div>
           `;
         } catch(e) {
-          return `<div style="padding:5px; border:1px dashed #ccc; font-size:0.8rem; color:#888;">Lỗi tải thông tin phòng [ID: ${id}]</div>`;
+          return `<div style="padding:5px; border:1px dashed #ccc; font-size:0.75rem; color:#888;">Lỗi tải thông tin phòng [ID: ${id}]</div>`;
         }
       } else {
-        return `<div style="padding:8px; background: rgba(0,0,0,0.02); border-radius: 8px; font-size:0.8rem; color:#6b7280; margin: 5px 0; border: 1px solid var(--card-border, #e2e8f0);">🏠 Phòng trọ Mã số: #${id} (Nhấn <a href="phong-tro.php?room_key=[ROOM:${source}:${id}]" style="color:#3b82f6;text-decoration:underline;font-weight:700;">Xem chi tiết</a>)</div>`;
+        return `<div class="no-tts" style="padding:8px; background: rgba(0,0,0,0.02); border-radius: 8px; font-size:0.75rem; color:#6b7280; margin: 5px 0; border: 1px solid var(--card-border, #e2e8f0);">🏠 Phòng trọ Mã số: #${id} (Nhấn <a href="phong-tro.php?room_key=[ROOM:${source}:${id}]" style="color:#3b82f6;text-decoration:underline;font-weight:700;">Xem chi tiết</a>)</div>`;
       }
     });
 
@@ -288,17 +315,17 @@ if (!chatBody || !messageInput || !sendMessageButton || !chatbotToggler) {
         const isFB = url.includes('facebook.com');
 
         if (isGoogleMaps) {
-          return `<a href="${url}" target="_blank" rel="noopener" class="maps-direction-btn"><i class="fas fa-map-marker-alt"></i> Mở Google Maps</a>`;
+          return `<a href="${url}" target="_blank" rel="noopener" class="maps-direction-btn no-tts"><i class="fas fa-map-marker-alt"></i> Mở Google Maps</a>`;
         }
         if (isZalo) {
-          return `<a href="${url}" target="_blank" rel="noopener" class="zalo-btn"><i class="fas fa-comment"></i> Chat Zalo ngay</a>`;
+          return `<a href="${url}" target="_blank" rel="noopener" class="zalo-btn no-tts"><i class="fas fa-comment"></i> Chat Zalo ngay</a>`;
         }
         if (isFB) {
-          return `<a href="${url}" target="_blank" rel="noopener" class="fb-btn"><i class="fab fa-facebook"></i> Xem Facebook</a>`;
+          return `<a href="${url}" target="_blank" rel="noopener" class="fb-btn no-tts"><i class="fab fa-facebook"></i> Xem Facebook</a>`;
         }
-        return `<a href="${url}" target="_blank" rel="noopener" style="color:#3b82f6;text-decoration:underline;">${url}</a>`;
+        return `<a href="${url}" target="_blank" rel="noopener" class="no-tts" style="color:#3b82f6;text-decoration:underline;">${url}</a>`;
       }
-    ).replace(/(0[3|5|7|8|9][0-9]{8})/g, '<a href="tel:$1" class="tel-btn"><i class="fas fa-phone"></i> $1</a>')
+    ).replace(/(0[3|5|7|8|9][0-9]{8})/g, '<a href="tel:$1" class="tel-btn no-tts"><i class="fas fa-phone"></i> $1</a>')
      .replace(/\n/g, '<br>');
   };
 
@@ -493,6 +520,13 @@ if (!chatBody || !messageInput || !sendMessageButton || !chatbotToggler) {
       let data;
       try {
         data = JSON.parse(rawText);
+        if (data && data.matched_rooms && Array.isArray(data.matched_rooms)) {
+          window.chatbotRoomCache = window.chatbotRoomCache || {};
+          data.matched_rooms.forEach(room => {
+            const key = `[ROOM:${room.source}:${room.room_id}]`;
+            window.chatbotRoomCache[key] = room;
+          });
+        }
       } catch (jsonErr) {
         // Encode rawText safe for innerHTML
         let safeHTML = rawText.substring(0, 150).replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -550,8 +584,14 @@ if (!chatBody || !messageInput || !sendMessageButton || !chatbotToggler) {
   chatBody.addEventListener("click", (e) => {
     if (e.target.classList.contains("message-audio-btn")) {
       const messageDiv = e.target.closest(".message");
-      const text = messageDiv.querySelector(".message-text").innerText;
-      speakText(text, e.target);
+      const messageTextEl = messageDiv.querySelector(".message-text");
+      if (messageTextEl) {
+        // Clone và xóa bỏ các phần tử giao diện phụ không cần đọc
+        const clone = messageTextEl.cloneNode(true);
+        clone.querySelectorAll(".no-tts").forEach(el => el.remove());
+        const text = clone.innerText || clone.textContent;
+        speakText(text, e.target);
+      }
     }
   });
 
@@ -1766,4 +1806,296 @@ if (!chatBody || !messageInput || !sendMessageButton || !chatbotToggler) {
 
     console.log("Custom emoji picker initialized!");
   })();
+
+  // Dynamic Leaflet Loader
+  const loadLeaflet = (callback) => {
+    if (window.L) {
+      callback();
+      return;
+    }
+    // 1. Load CSS
+    if (!document.querySelector("link[href*='leaflet.css']")) {
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+      document.head.appendChild(link);
+    }
+    // 2. Load JS
+    if (!document.querySelector("script[src*='leaflet.js']")) {
+      const script = document.createElement("script");
+      script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+      script.onload = () => {
+        callback();
+      };
+      document.head.appendChild(script);
+    } else {
+      const interval = setInterval(() => {
+        if (window.L) {
+          clearInterval(interval);
+          callback();
+        }
+      }, 100);
+    }
+  };
+
+  // Toggle Mini Leaflet Map inside Chat bubble
+  window.toggleRoomBubbleMap = (btn, source, id) => {
+    const roomKey = `[ROOM:${source}:${id}]`;
+    const room = window.chatbotRoomCache && window.chatbotRoomCache[roomKey];
+    if (!room || !room.coords) {
+      Swal.fire({
+        title: "Bản đồ",
+        text: "Không tìm thấy thông tin tọa độ cho phòng này.",
+        icon: "warning",
+        confirmButtonColor: "#3b82f6"
+      });
+      return;
+    }
+    
+    const cardDiv = btn.closest(".chatbot-room-card");
+    if (!cardDiv) return;
+
+    let mapContainer = cardDiv.querySelector(".bubble-map-container");
+    if (!mapContainer) {
+      mapContainer = document.createElement("div");
+      mapContainer.className = "bubble-map-container no-tts";
+      mapContainer.style.cssText = "width: 100%; height: 180px; margin-top: 10px; border-radius: 8px; overflow: hidden; border: 1px solid #cbd5e1; position: relative;";
+      cardDiv.appendChild(mapContainer);
+      
+      const mapId = `bubble-map-${source}-${id}-${Date.now()}`;
+      mapContainer.id = mapId;
+      
+      loadLeaflet(() => {
+        const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19
+        });
+        const googleHybrid = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+          maxZoom: 19
+        });
+
+        const map = L.map(mapId, {
+          layers: [osm]
+        }).setView([room.coords.lat, room.coords.lng], 15);
+        
+        // Mini Satellite Style Toggle (No text, just icon/thumbnail toggle)
+        const toggleBtn = document.createElement("div");
+        toggleBtn.style.cssText = "position: absolute; bottom: 8px; left: 8px; z-index: 1000; width: 38px; height: 38px; border: 2px solid #fff; border-radius: 6px; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.3); background: url('https://mt1.google.com/vt/lyrs=y&x=13001&y=7326&z=14') no-repeat center center; background-size: cover; transition: transform 0.2s;";
+        toggleBtn.title = "Chuyển sang Bản đồ vệ tinh";
+        
+        toggleBtn.onmouseenter = () => toggleBtn.style.transform = "scale(1.05)";
+        toggleBtn.onmouseleave = () => toggleBtn.style.transform = "scale(1)";
+        
+        let activeLayer = 'osm';
+        toggleBtn.onclick = (e) => {
+          e.stopPropagation();
+          if (activeLayer === 'osm') {
+            map.removeLayer(osm);
+            map.addLayer(googleHybrid);
+            activeLayer = 'satellite';
+            toggleBtn.style.backgroundImage = "url('https://a.tile.openstreetmap.org/14/13001/7326.png')";
+            toggleBtn.title = "Chuyển sang Bản đồ thường";
+          } else {
+            map.removeLayer(googleHybrid);
+            map.addLayer(osm);
+            activeLayer = 'osm';
+            toggleBtn.style.backgroundImage = "url('https://mt1.google.com/vt/lyrs=y&x=13001&y=7326&z=14')";
+            toggleBtn.title = "Chuyển sang Bản đồ vệ tinh";
+          }
+        };
+        mapContainer.appendChild(toggleBtn);
+        
+        const marker = L.marker([room.coords.lat, room.coords.lng]).addTo(map);
+        marker.bindPopup(`<b>${room.ten_phong || room.tieude || "Phòng trọ"}</b><br>${room.diachi}`).openPopup();
+        
+        // Fit current location route if geolocation is allowed
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(position => {
+            const userLat = position.coords.latitude;
+            const userLng = position.coords.longitude;
+            
+            L.marker([userLat, userLng], {
+              icon: L.icon({
+                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
+                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                iconSize: [25, 41],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34],
+                shadowSize: [41, 41]
+              })
+            }).addTo(map).bindPopup("Vị trí của bạn");
+            
+            // Draw direct routing line
+            L.polyline([[userLat, userLng], [room.coords.lat, room.coords.lng]], {
+              color: '#3b82f6',
+              weight: 4,
+              opacity: 0.8,
+              dashArray: '5, 10'
+            }).addTo(map);
+            
+            map.fitBounds([[userLat, userLng], [room.coords.lat, room.coords.lng]], { padding: [20, 20] });
+          });
+        }
+        
+        setTimeout(() => map.invalidateSize(), 200);
+      });
+    } else {
+      if (mapContainer.style.display === 'none') {
+        mapContainer.style.display = 'block';
+      } else {
+        mapContainer.style.display = 'none';
+      }
+    }
+    
+    // Auto scroll chat body to show the map container
+    setTimeout(() => {
+      chatBody.scrollTo({ behavior: "smooth", top: chatBody.scrollHeight });
+    }, 300);
+  };
+
+  // Compare checkboxes handling
+  window.handleCompareCheckboxChange = () => {
+    const checkedBoxes = document.querySelectorAll(".compare-checkbox:checked");
+    const keys = Array.from(checkedBoxes).map(cb => cb.getAttribute("data-room-key"));
+    
+    let bar = document.getElementById("chatbot-compare-bar");
+    if (keys.length === 0) {
+      if (bar) bar.style.display = "none";
+      return;
+    }
+    
+    if (!bar) {
+      bar = document.createElement("div");
+      bar.id = "chatbot-compare-bar";
+      bar.className = "no-tts";
+      bar.style.cssText = `
+        position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+        background: linear-gradient(135deg, #1e293b, #0f172a); color: white;
+        padding: 12px 24px; border-radius: 30px; box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        z-index: 99999; display: flex; align-items: center; gap: 16px;
+        font-family: 'Inter', sans-serif; transition: all 0.3s ease;
+      `;
+      document.body.appendChild(bar);
+    }
+    
+    bar.innerHTML = `
+      <span style="font-size: 0.9rem; font-weight: 600;">Đang chọn ${keys.length} phòng để so sánh</span>
+      <button onclick="showComparisonPopup(${JSON.stringify(keys).replace(/"/g, '&quot;')})" style="background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; padding: 6px 16px; border-radius: 20px; font-weight: 700; cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 10px rgba(16,185,129,0.3);">
+        <i class="fas fa-balance-scale"></i> So sánh ngay
+      </button>
+      <button onclick="clearCompareSelection()" style="background: none; border: none; color: #9ca3af; cursor: pointer; font-size: 0.8rem; text-decoration: underline;">Hủy</button>
+    `;
+    bar.style.display = "flex";
+  };
+
+  window.clearCompareSelection = () => {
+    document.querySelectorAll(".compare-checkbox").forEach(cb => cb.checked = false);
+    const bar = document.getElementById("chatbot-compare-bar");
+    if (bar) bar.style.display = "none";
+  };
+
+  window.showComparisonPopup = (roomKeys) => {
+    const rooms = roomKeys.map(key => {
+      if (window.chatbotRoomCache && window.chatbotRoomCache[key]) {
+        return window.chatbotRoomCache[key];
+      }
+      const card = document.querySelector(`.room-card[data-room-key="${key}"]`);
+      if (card) {
+        try { return JSON.parse(card.getAttribute("data-room") || "{}"); } catch(e) {}
+      }
+      return null;
+    }).filter(Boolean);
+
+    if (rooms.length < 2) {
+      Swal.fire({
+        title: "So sánh",
+        text: "Vui lòng chọn ít nhất 2 phòng để so sánh.",
+        icon: "warning",
+        confirmButtonColor: "#10b981"
+      });
+      return;
+    }
+    
+    let modal = document.getElementById("chatbot-compare-modal");
+    if (!modal) {
+      modal = document.createElement("div");
+      modal.id = "chatbot-compare-modal";
+      modal.className = "no-tts";
+      modal.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.6); z-index: 100000;
+        display: flex; align-items: center; justify-content: center;
+        font-family: 'Inter', sans-serif;
+      `;
+      document.body.appendChild(modal);
+    }
+    
+    let cols = rooms.length;
+    let gridCols = `repeat(${cols}, 1fr)`;
+    if (window.innerWidth <= 768) {
+      gridCols = "1fr";
+    }
+
+    let headerHtml = `
+      <div style="background: white; border-radius: 16px; width: 92%; max-width: 900px; max-height: 85vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.2); padding: 24px; position: relative; animation: modalFadeIn 0.3s ease;">
+        <button onclick="document.getElementById('chatbot-compare-modal').style.display='none'" style="position: absolute; top: 16px; right: 16px; border: none; background: none; font-size: 1.8rem; cursor: pointer; color: #9ca3af; hover: color: #4b5563; font-weight: 300;">&times;</button>
+        <h3 style="margin: 0 0 20px 0; font-size: 1.3rem; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px;"><i class="fas fa-balance-scale" style="color: #10b981;"></i> So sánh phòng trọ chi tiết</h3>
+        <div style="display: grid; grid-template-columns: ${gridCols}; gap: 20px;">
+    `;
+    
+    let cardsHtml = '';
+    rooms.forEach(room => {
+      const priceStr = typeof room.gia === 'number' ? room.gia.toLocaleString('vi-VN') + ' VNĐ/tháng' : room.gia;
+      const amenities = Array.isArray(room.tiennghi) ? room.tiennghi : (typeof room.tiennghi === 'string' ? room.tiennghi.split(',') : []);
+      const img = room.hinhanh || "https://via.placeholder.com/400x300?text=Phong+Tro";
+      const title = room.ten_phong || room.tieude || "Phòng trọ";
+      const desc = room.mota || "Không có mô tả.";
+      
+      cardsHtml += `
+        <div style="border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; background: #f8fafc; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+          <img src="${img}" style="width: 100%; height: 160px; object-fit: cover; border-radius: 8px;" />
+          <h4 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #1e293b; min-height: 44px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${title}</h4>
+          <div style="margin-top: auto; display: flex; flex-direction: column; gap: 8px; font-size: 0.88rem;">
+            <div style="border-top: 1px solid #e2e8f0; padding-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+              <span style="color: #64748b; font-weight: 500;">Giá thuê:</span>
+              <span style="font-weight: 800; color: #10b981; font-size: 1rem;">${priceStr}</span>
+            </div>
+            <div style="border-top: 1px dashed #e2e8f0; padding-top: 8px; display: flex; justify-content: space-between;">
+              <span style="color: #64748b; font-weight: 500;">Diện tích:</span>
+              <span style="font-weight: 700; color: #334155;">${room.dientich} m²</span>
+            </div>
+            <div style="border-top: 1px dashed #e2e8f0; padding-top: 8px; display: flex; flex-direction: column; gap: 2px;">
+              <span style="color: #64748b; font-weight: 500;">Địa chỉ:</span>
+              <span style="font-weight: 500; color: #475569; line-height: 1.4;">${room.diachi}</span>
+            </div>
+            <div style="border-top: 1px dashed #e2e8f0; padding-top: 8px; display: flex; flex-direction: column; gap: 4px;">
+              <span style="color: #64748b; font-weight: 500;">Mô tả:</span>
+              <span style="color: #64748b; font-size: 0.8rem; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">${desc}</span>
+            </div>
+            <div style="border-top: 1px dashed #e2e8f0; padding-top: 8px; display: flex; flex-direction: column; gap: 6px;">
+              <span style="color: #64748b; font-weight: 500;">Tiện nghi:</span>
+              <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                ${amenities.map(a => `<span style="background: #e2e8f0; color: #334155; font-size: 0.72rem; padding: 3px 8px; border-radius: 6px; font-weight: 600;">${a.trim()}</span>`).join('')}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+    
+    // Add simple CSS animations
+    if (!document.getElementById("compare-modal-animation")) {
+      const style = document.createElement("style");
+      style.id = "compare-modal-animation";
+      style.textContent = `
+        @keyframes modalFadeIn {
+          from { opacity: 0; transform: scale(0.95); }
+          to { opacity: 1; transform: scale(1); }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    
+    modal.innerHTML = headerHtml + cardsHtml + `</div></div>`;
+    modal.style.display = 'flex';
+  };
 } // End of chatbot guard

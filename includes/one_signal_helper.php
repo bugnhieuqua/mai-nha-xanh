@@ -83,9 +83,7 @@ function sendNotification($data) {
         curl_setopt($ch, CURLOPT_POST, TRUE);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($fields));
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, TRUE);
-
         $response = curl_exec($ch);
-        curl_close($ch);
         
         return ['success' => true, 'response' => $response];
     } catch (Exception $e) {

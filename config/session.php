@@ -1,40 +1,42 @@
 <?php
 date_default_timezone_set('Asia/Ho_Chi_Minh');
 
-if (session_status() == PHP_SESSION_NONE) {
-    // Tự động phát hiện HTTPS
-    $is_secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || $_SERVER['SERVER_PORT'] == 443;
+if (php_sapi_name() !== 'cli') {
+    if (session_status() == PHP_SESSION_NONE) {
+        // Tự động phát hiện HTTPS
+        $is_secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (!empty($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443);
 
-    ini_set('session.cookie_lifetime', 0);
-    session_set_cookie_params([
-        'lifetime' => 0,
-        'path' => '/',
-        'domain' => '',
-        'secure' => $is_secure,
-        'httponly' => true,
-        'samesite' => 'Lax'
-    ]);
-    session_start();
-}
-
-// --- Session Fingerprinting: Ngăn chặn cướp phiên (Session Hijacking) ---
-if (isset($_SESSION['user_id'])) {
-    $current_fingerprint = md5($_SERVER['HTTP_USER_AGENT']);
-    
-    if (!isset($_SESSION['fingerprint'])) {
-        $_SESSION['fingerprint'] = $current_fingerprint;
-    } elseif ($_SESSION['fingerprint'] !== $current_fingerprint) {
-        // Nếu Fingerprint thay đổi (nghi ngờ bị chiếm quyền), hủy session và đăng xuất
-        session_unset();
-        session_destroy();
-        header("Location: " . ((strpos($_SERVER['SCRIPT_NAME'], '/admin/') !== false) ? '../' : '') . "login.php?error=session_expired");
-        exit;
+        ini_set('session.cookie_lifetime', 0);
+        session_set_cookie_params([
+            'lifetime' => 0,
+            'path' => '/',
+            'domain' => '',
+            'secure' => $is_secure,
+            'httponly' => true,
+            'samesite' => 'Lax'
+        ]);
+        session_start();
     }
-}
 
-// Khởi tạo CSRF Token nếu chưa có
-if (empty($_SESSION['csrf_token'])) {
-    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    // --- Session Fingerprinting: Ngăn chặn cướp phiên (Session Hijacking) ---
+    if (isset($_SESSION['user_id'])) {
+        $current_fingerprint = md5($_SERVER['HTTP_USER_AGENT'] ?? '');
+        
+        if (!isset($_SESSION['fingerprint'])) {
+            $_SESSION['fingerprint'] = $current_fingerprint;
+        } elseif ($_SESSION['fingerprint'] !== $current_fingerprint) {
+            // Nếu Fingerprint thay đổi (nghi ngờ bị chiếm quyền), hủy session và đăng xuất
+            session_unset();
+            session_destroy();
+            header("Location: " . ((strpos($_SERVER['SCRIPT_NAME'] ?? '', '/admin/') !== false) ? '../' : '') . "login.php?error=session_expired");
+            exit;
+        }
+    }
+
+    // Khởi tạo CSRF Token nếu chưa có
+    if (empty($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
 }
 
 /**

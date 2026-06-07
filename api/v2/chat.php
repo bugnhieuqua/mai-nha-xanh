@@ -1,12 +1,13 @@
 <?php
 /**
- * RESTful RAG Chatbot API v2 (OpenAI Format Compatible)
+ * RESTful RAG Chatbot API v2 (OpenAI Format Compatible with Tool Calling)
  * POST /api/v2/chat.php
  * Body: Base64 Encoded JSON string matching { "messages": [...] } (WAF Bypass) or raw JSON
  */
 
 require_once __DIR__ . '/../../config/bootstrap.php';
 require_once __DIR__ . '/../../includes/room_status_helper.php';
+require_once __DIR__ . '/../../includes/ai_helper.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
@@ -54,166 +55,9 @@ if (empty($apiKey)) {
 }
 
 $model = $_ENV['GROQ_MODEL'] ?? getenv('GROQ_MODEL') ?? 'llama-3.3-70b-versatile';
+$appDebug = $_ENV['APP_DEBUG'] ?? getenv('APP_DEBUG') ?? 'false';
 
-// 2. Trích xuất tin nhắn cuối cùng của người dùng để thực hiện Retrieval
-$userMessage = '';
-for ($i = count($payload['messages']) - 1; $i >= 0; $i--) {
-    if ($payload['messages'][$i]['role'] === 'user') {
-        $userMessage = $payload['messages'][$i]['content'];
-        break;
-    }
-}
-
-$db = getDB();
-$retrievedRooms = [];
-$isSearchRequest = false;
-
-// Chỉ thực hiện trích xuất thực tế khi người dùng đang có nhu cầu tìm kiếm phòng trọ
-if (!empty($userMessage) && preg_match('/(tìm|thuê|phòng|nhà|trọ|giá|diện tích|tiện nghi|ở đâu|bao nhiêu|có)/iu', $userMessage)) {
-    $isSearchRequest = true;
-    
-    // Gọi Groq nhỏ để trích xuất các keywords tìm kiếm
-    $extractionPrompt = [
-        [
-            'role' => 'system',
-            'content' => "Bạn là công cụ trích xuất thông tin tìm kiếm phòng trọ tại TP. Vinh, Nghệ An. Hãy trích xuất bộ lọc từ tin nhắn của người dùng thành cấu trúc JSON:
-{
-  \"ward\": \"[Tên phường ở TP. Vinh viết có dấu hoặc không dấu, ví dụ: 'Hưng Dũng', 'Bến Thủy', 'Lê Lợi', hoặc null]\",
-  \"max_price\": [giá tối đa hoặc null],
-  \"min_price\": [giá tối thiểu hoặc null],
-  \"min_area\": [diện tích tối thiểu m2 hoặc null],
-  \"max_area\": [diện tích tối đa m2 hoặc null],
-  \"amenities\": [mảng các tiện nghi, hoặc mảng trống]
-}
-Chỉ trả về chuỗi JSON thô, không kèm markdown ```json."
-        ],
-        [
-            'role' => 'user',
-            'content' => $userMessage
-        ]
-    ];
-
-    $urlExtract = 'https://api.groq.com/openai/v1/chat/completions';
-    $postExtract = json_encode([
-        'model' => $model,
-        'messages' => $extractionPrompt,
-        'temperature' => 0.1,
-        'response_format' => ['type' => 'json_object']
-    ]);
-
-    $ch = curl_init($urlExtract);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $postExtract);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        'Content-Type: application/json',
-        'Authorization: Bearer ' . $apiKey
-    ]);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 15);
-
-    // Bypass SSL trên localhost
-    $appDebug = $_ENV['APP_DEBUG'] ?? getenv('APP_DEBUG') ?? 'false';
-    if ($appDebug === 'true') {
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-    }
-
-    $resExtract = curl_exec($ch);
-    curl_close($ch);
-
-    $criteria = null;
-    if ($resExtract) {
-        $resArr = json_decode($resExtract, true);
-        $content = $resArr['choices'][0]['message']['content'] ?? '{}';
-        $criteria = json_decode(trim($content), true);
-    }
-
-    // 3. Thực hiện truy vấn DB để tìm phòng khớp bộ lọc
-    if ($criteria) {
-        try {
-            ensureDangbaiRoomStatusSchema($db);
-            
-            $stmt1 = $db->query("SELECT id, ten_phong, mota, hinhanh, gia, dientich, diachi, tiennghi, 'phongtro' as nguon FROM phongtro");
-            $rooms1 = $stmt1->fetchAll(PDO::FETCH_ASSOC);
-
-            $stmt2 = $db->query("SELECT id, tieude as ten_phong, mota, hinhanh, gia, dientich, diachi, tiennghi, 'dangbai' as nguon FROM dangbai_chothuetro WHERE trangthai = 'da_duyet'");
-            $rooms2 = $stmt2->fetchAll(PDO::FETCH_ASSOC);
-
-            $allRooms = array_merge($rooms1, $rooms2);
-
-            foreach ($allRooms as $r) {
-                // Lọc theo phường
-                if (!empty($criteria['ward'])) {
-                    $normalizedWard = mb_strtolower($criteria['ward'], 'UTF-8');
-                    $normalizedAddress = mb_strtolower($r['diachi'], 'UTF-8');
-                    if (mb_strpos($normalizedAddress, $normalizedWard) === false) {
-                        $shortWard = str_replace('phường ', '', $normalizedWard);
-                        if (mb_strpos($normalizedAddress, $shortWard) === false) {
-                            continue;
-                        }
-                    }
-                }
-
-                // Lọc theo giá
-                if ($criteria['min_price'] !== null && $r['gia'] < $criteria['min_price']) continue;
-                if ($criteria['max_price'] !== null && $r['gia'] > $criteria['max_price']) continue;
-
-                // Lọc theo diện tích
-                if ($criteria['min_area'] !== null && $r['dientich'] < $criteria['min_area']) continue;
-                if ($criteria['max_area'] !== null && $r['dientich'] > $criteria['max_area']) continue;
-
-                // Lọc theo tiện nghi
-                if (!empty($criteria['amenities']) && is_array($criteria['amenities'])) {
-                    $hasAll = true;
-                    $normalizedTienNghi = mb_strtolower($r['tiennghi'], 'UTF-8');
-                    foreach ($criteria['amenities'] as $am) {
-                        $amClean = mb_strtolower($am, 'UTF-8');
-                        if ($amClean === 'điều hòa') $amClean = 'máy lạnh';
-                        if (mb_strpos($normalizedTienNghi, $amClean) === false) {
-                            $hasAll = false;
-                            break;
-                        }
-                    }
-                    if (!$hasAll) continue;
-                }
-
-                $retrievedRooms[] = $r;
-                if (count($retrievedRooms) >= 6) break; // Giới hạn 6 phòng tốt nhất
-            }
-        } catch (Exception $e) {}
-    }
-}
-
-// Nếu không tìm thấy phòng trọ nào khớp hoặc đây không phải câu hỏi tìm kiếm, 
-// lấy 3 phòng trọ mới nhất làm phòng nổi bật để giới thiệu
-if (empty($retrievedRooms)) {
-    try {
-        $stmt1 = $db->query("SELECT id, ten_phong, mota, hinhanh, gia, dientich, diachi, tiennghi, 'phongtro' as nguon, ngaydang FROM phongtro");
-        $rooms1 = $stmt1->fetchAll(PDO::FETCH_ASSOC);
-
-        $stmt2 = $db->query("SELECT id, tieude as ten_phong, mota, hinhanh, gia, dientich, diachi, tiennghi, 'dangbai' as nguon, ngaydang FROM dangbai_chothuetro WHERE trangthai = 'da_duyet'");
-        $rooms2 = $stmt2->fetchAll(PDO::FETCH_ASSOC);
-
-        $all = array_merge($rooms1, $rooms2);
-        usort($all, function($a, $b) { return strtotime($b['ngaydang']) - strtotime($a['ngaydang']); });
-        $retrievedRooms = array_slice($all, 0, 4);
-    } catch (Exception $e) {}
-}
-
-// 4. Định dạng danh sách phòng trọ để nhúng vào Prompt RAG
-$contextText = '';
-foreach ($retrievedRooms as $r) {
-    $contextText .= "- ID: " . $r['id'] . "\n";
-    $contextText .= "  Nguồn: " . $r['nguon'] . "\n";
-    $contextText .= "  Tiêu đề: " . $r['ten_phong'] . "\n";
-    $contextText .= "  Giá: " . number_format($r['gia']) . " VNĐ/tháng\n";
-    $contextText .= "  Diện tích: " . $r['dientich'] . " m2\n";
-    $contextText .= "  Địa chỉ: " . $r['diachi'] . "\n";
-    $contextText .= "  Tiện nghi: " . $r['tiennghi'] . "\n";
-    $contextText .= "  Thẻ hiển thị card: [ROOM:" . $r['nguon'] . ":" . $r['id'] . "]\n\n";
-}
-
-// 5. Load System Prompt cốt lõi của chatbot
+// 2. Load System Prompt cốt lõi của chatbot
 $systemPromptBase = '';
 if (file_exists(__DIR__ . '/../../config/chatbot_prompt.php')) {
     $systemPromptBase = require __DIR__ . '/../../config/chatbot_prompt.php';
@@ -221,13 +65,16 @@ if (file_exists(__DIR__ . '/../../config/chatbot_prompt.php')) {
     $systemPromptBase = "Bạn là Trợ lý AI thông minh của Mái Nhà Xanh tại TP. Vinh, Nghệ An.";
 }
 
-// Bổ sung dữ liệu phòng RAG vào system prompt
+// Bổ sung hướng dẫn thẻ phòng trọ [ROOM:nguon:id] vào system prompt để LLM ghi nhớ
 $systemPrompt = $systemPromptBase . "\n\n" . 
-  "DỮ LIỆU PHÒNG TRỌ THỰC TẾ LẤY TỪ HỆ THỐNG ĐỂ BẠN GIỚI THIỆU:\n" . 
-  (empty($contextText) ? "Không có phòng trọ nào sẵn sàng." : $contextText) . "\n" .
-  "LƯU Ý CỰC KỲ QUAN TRỌNG: Bạn chỉ được gợi ý các phòng trọ có tên trong danh sách phía trên. Dùng thẻ [ROOM:nguon:id] tương ứng để hiển thị thông tin dạng Card phòng trọ đẹp mắt. Không tự chế ID phòng.";
+  "CÚ PHÁP HIỂN THỊ PHÒNG TRỌ (CỰC KỲ QUAN TRỌNG):\n" .
+  "Khi giới thiệu bất kỳ phòng trọ nào từ kết quả tìm kiếm (tool search_rooms_semantic), bạn BẮT BUỘC phải chèn thẻ dạng [ROOM:nguon:id] (Ví dụ: [ROOM:phongtro:44] hoặc [ROOM:dangbai:25]) vào ngay cuối mô tả hoặc vị trí thích hợp của phòng đó. Điều này giúp hệ thống render thành thẻ phòng trực quan đẹp mắt. KHÔNG tự chế ID phòng và không bỏ quên thẻ này.\n\n" .
+  "HƯỚNG DẪN GỌI HÀM (TOOL CALLING):\n" .
+  "- CHỈ gọi hàm `search_rooms_semantic` khi người dùng thực sự muốn tìm kiếm hoặc hỏi về phòng trọ.\n" .
+  "- Nếu người dùng chỉ nói các từ chung chung như 'chi tiết', 'xem thêm', 'ok', 'chào bạn' mà chưa có nhu cầu tìm phòng cụ thể, hãy phản hồi tự nhiên để hỏi thêm thông tin thay vì gọi hàm vô ích.\n" .
+  "- Khi gọi hàm, tuyệt đối không bọc các đối số trong markdown code blocks hay trả về các ký tự định dạng thừa.";
 
-// 6. Chuẩn bị danh sách tin nhắn gửi đến Groq
+// 3. Chuẩn bị danh sách tin nhắn gửi đến Groq
 $groqMessages = [];
 $groqMessages[] = ['role' => 'system', 'content' => $systemPrompt];
 
@@ -242,19 +89,50 @@ foreach ($payload['messages'] as $msg) {
     $groqMessages[] = ['role' => $role, 'content' => $content];
 }
 
-// 7. Gửi yêu cầu đến Groq API
+// 4. Khai báo công cụ (Tools) cho Groq API
+$tools = [
+    [
+        'type' => 'function',
+        'function' => [
+            'name' => 'search_rooms_semantic',
+            'description' => 'Tìm kiếm phòng trọ bằng ngữ nghĩa (Vector Search) kết hợp với các bộ lọc giá và phường tại TP. Vinh.',
+            'parameters' => [
+                'type' => 'object',
+                'properties' => [
+                    'query' => [
+                        'type' => 'string',
+                        'description' => 'Nhu cầu tìm kiếm phòng trọ của người dùng bằng ngôn ngữ tự nhiên, ví dụ: "yên tĩnh, an ninh, sạch sẽ", "gần trường học có máy giặt".'
+                    ],
+                    'max_price' => [
+                        'type' => 'string',
+                        'description' => 'Giá thuê tối đa mong muốn (VNĐ/tháng), ví dụ: "2000000" hoặc "2 triệu".'
+                    ],
+                    'ward' => [
+                        'type' => 'string',
+                        'description' => 'Tên phường cụ thể tại TP. Vinh. CHỈ điền trường này nếu người dùng nhắc đến TÊN PHƯỜNG cụ thể trong câu hỏi (ví dụ: "ở Bến Thủy", "tại phường Lê Lợi"). Không tự suy luận.'
+                    ]
+                ],
+                'required' => []
+            ]
+        ]
+    ]
+];
+
+// 5. Gọi Groq API lần 1
 $url = 'https://api.groq.com/openai/v1/chat/completions';
-$postData = json_encode([
+$postData = [
     'model' => $model,
     'messages' => $groqMessages,
     'temperature' => 0.7,
     'max_tokens' => 2048,
-]);
+    'tools' => $tools,
+    'tool_choice' => 'auto'
+];
 
 $ch = curl_init($url);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_POST, true);
-curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($postData));
 curl_setopt($ch, CURLOPT_HTTPHEADER, [
     'Content-Type: application/json',
     'Authorization: Bearer ' . $apiKey
@@ -269,14 +147,289 @@ if ($appDebug === 'true') {
 $response = curl_exec($ch);
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 $curlError = curl_error($ch);
-curl_close($ch);
 
 if ($curlError) {
     http_response_code(502);
-    echo json_encode(['error' => 'Kết nối đến AI thất bại: ' . $curlError]);
+    echo json_encode(['error' => 'Kết nối đến AI thất bại (Vòng 1): ' . $curlError]);
     exit;
 }
 
-// Trả phản hồi về dạng OpenAI format đồng bộ để tương thích 100% với assets/js/assistant.js
+if ($httpCode !== 200) {
+    error_log("Groq API Error (Round 1): Status code: $httpCode. Response: " . $response);
+    http_response_code($httpCode);
+    echo $response;
+    exit;
+}
+
+$data = json_decode($response, true);
+$choice = $data['choices'][0] ?? null;
+
+// 6. Kiểm tra xem LLM có yêu cầu gọi Tool (Function Calling) không
+if ($choice && isset($choice['message']['tool_calls']) && !empty($choice['message']['tool_calls'])) {
+    
+    // Thêm tin nhắn assistant chứa yêu cầu gọi tool vào lịch sử
+    $assistantMessage = $choice['message'];
+    $groqMessages[] = $assistantMessage;
+    
+    // Thực thi từng tool call (ở đây chủ yếu có 1 tool tìm kiếm)
+    foreach ($choice['message']['tool_calls'] as $toolCall) {
+        if ($toolCall['function']['name'] === 'search_rooms_semantic') {
+            $args = json_decode($toolCall['function']['arguments'], true) ?: [];
+            
+            $query = $args['query'] ?? '';
+            $maxPrice = null;
+            if (isset($args['max_price']) && $args['max_price'] !== '') {
+                $maxPrice = parsePriceString(strval($args['max_price']));
+            }
+            $ward = $args['ward'] ?? null;
+            
+            // Thực thi tìm kiếm ngữ nghĩa
+            $searchResult = execute_semantic_search($query, $maxPrice, $ward);
+            
+            // Thêm kết quả thực thi tool vào danh sách tin nhắn
+            $groqMessages[] = [
+                'role' => 'tool',
+                'tool_call_id' => $toolCall['id'],
+                'name' => 'search_rooms_semantic',
+                'content' => $searchResult
+            ];
+        }
+    }
+    
+    // Gọi Groq API lần 2 để nhận câu trả lời cuối cùng
+    $postData2 = [
+        'model' => $model,
+        'messages' => $groqMessages,
+        'temperature' => 0.7,
+        'max_tokens' => 2048
+    ];
+    
+    // Tận dụng cURL handle hiện tại
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($postData2));
+    
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($ch);
+    
+    if ($curlError) {
+        http_response_code(502);
+        echo json_encode(['error' => 'Kết nối đến AI thất bại (Vòng 2): ' . $curlError]);
+        exit;
+    }
+    
+    if ($httpCode === 200) {
+        $resArray = json_decode($response, true);
+        if ($resArray) {
+            $resArray['matched_rooms'] = $GLOBALS['chatbot_matched_rooms'] ?? [];
+            echo json_encode($resArray);
+            exit;
+        }
+    }
+    error_log("Groq API Error (Round 2): Status code: $httpCode. Response: " . $response);
+    http_response_code($httpCode);
+    echo $response;
+    exit;
+}
+
+// Nếu không gọi Tool, trả về phản hồi gốc luôn (Single-Turn phản hồi thẳng)
+if ($httpCode === 200) {
+    $resArray = json_decode($response, true);
+    if ($resArray) {
+        $resArray['matched_rooms'] = $GLOBALS['chatbot_matched_rooms'] ?? [];
+        echo json_encode($resArray);
+        exit;
+    }
+}
 http_response_code($httpCode);
 echo $response;
+exit;
+
+/**
+ * Thực thi truy vấn tìm kiếm Vector và Cosine Similarity
+ */
+function execute_semantic_search(string $query, ?float $maxPrice, ?string $ward): string {
+    $db = getDB();
+    if (!$db) {
+        return "Lỗi: Không thể kết nối cơ sở dữ liệu.";
+    }
+    
+    $query = trim($query);
+    $queryVector = null;
+    
+    if (empty($query) && $maxPrice === null && empty($ward)) {
+        return "Hãy hỏi tôi cụ thể hơn về nhu cầu của bạn (ví dụ: phòng trọ ở khu vực nào, giá khoảng bao nhiêu, có tiện nghi gì).";
+    }
+    
+    if (!empty($query)) {
+        // 1. Sinh vector embedding cho truy vấn của người dùng
+        $queryVector = getEmbedding($query);
+        if ($queryVector === null) {
+            return "Lỗi: Không thể sinh vector embedding cho truy vấn tìm kiếm này.";
+        }
+    }
+    
+    // Nhận diện nếu câu hỏi có chứa các từ khóa tìm phòng TRỐNG / CÒN PHÒNG
+    $lookForVacantOnly = false;
+    $cleanQuery = mb_strtolower($query, 'UTF-8');
+    if (mb_strpos($cleanQuery, 'trống') !== false || 
+        mb_strpos($cleanQuery, 'còn phòng') !== false || 
+        mb_strpos($cleanQuery, 'chứa thuê') !== false || 
+        mb_strpos($cleanQuery, 'chưa thuê') !== false || 
+        mb_strpos($cleanQuery, 'sẵn sàng') !== false || 
+        mb_strpos($cleanQuery, 'trong') !== false || 
+        mb_strpos($cleanQuery, 'con phong') !== false) {
+        $lookForVacantOnly = true;
+    }
+    
+    try {
+        // 2. Query tách biệt hai bảng để tránh lỗi Collation Mismatch trong UNION ALL
+        $stmt1 = $db->query("
+            SELECT r.room_id, r.source, r.embedding,
+                   p.ten_phong, p.mota, p.hinhanh, p.gia, p.dientich, p.diachi, p.tiennghi, p.trangthai as trangthai_phong
+            FROM room_embeddings r
+            JOIN phongtro p ON r.room_id = p.id AND r.source = 'phongtro'
+        ");
+        $rooms1 = $stmt1->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        $stmt2 = $db->query("
+            SELECT r.room_id, r.source, r.embedding,
+                   d.tieude as ten_phong, d.mota, d.hinhanh, d.gia, d.dientich, d.diachi, d.tiennghi, d.trangthai_phong
+            FROM room_embeddings r
+            JOIN dangbai_chothuetro d ON r.room_id = d.id AND r.source = 'dangbai' AND d.trangthai = 'da_duyet'
+        ");
+        $rooms2 = $stmt2->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        $rooms = array_merge($rooms1, $rooms2);
+
+        if (empty($rooms)) {
+            return "Thông báo: Hiện tại chưa có dữ liệu phòng trọ nào được nạp vector index.";
+        }
+        
+        $scoredRooms = [];
+        $scoredRoomsNoWard = []; // Fallback list nếu bộ lọc phường bị loại bỏ hết
+        foreach ($rooms as $r) {
+            $roomVector = json_decode($r['embedding'], true);
+            
+            // Lọc theo tình trạng phòng trống nếu người dùng yêu cầu phòng trống
+            $status = normalizeRoomStatusValue($r['trangthai_phong'] ?? 'con_phong');
+            if ($lookForVacantOnly && $status !== 'con_phong') {
+                continue;
+            }
+
+            // Lọc theo giá
+            if ($maxPrice !== null && $r['gia'] > $maxPrice) {
+                continue;
+            }
+            
+            // Tính cosine similarity
+            if ($queryVector !== null && !empty($roomVector) && is_array($roomVector)) {
+                $score = cosineSimilarity($queryVector, $roomVector);
+            } else {
+                $score = 1.0; // Điểm tối đa mặc định nếu lọc thuần thuộc tính
+            }
+            $r['similarity'] = $score;
+            
+            // Thêm vào danh sách không lọc phường làm fallback
+            $scoredRoomsNoWard[] = $r;
+            
+            // Lọc theo phường
+            if (!empty($ward)) {
+                $normalizedWard = mb_strtolower($ward, 'UTF-8');
+                $normalizedAddress = mb_strtolower($r['diachi'], 'UTF-8');
+                if (mb_strpos($normalizedAddress, $normalizedWard) === false) {
+                    $shortWard = str_replace('phường ', '', $normalizedWard);
+                    if (mb_strpos($normalizedAddress, $shortWard) === false) {
+                        continue;
+                    }
+                }
+            }
+            
+            $scoredRooms[] = $r;
+        }
+        
+        // Fallback: nếu lọc phường làm danh sách rỗng, nhưng danh sách không lọc phường vẫn có kết quả
+        if (empty($scoredRooms) && !empty($scoredRoomsNoWard)) {
+            $scoredRooms = $scoredRoomsNoWard;
+        }
+        
+        // Sắp xếp theo độ tương đồng giảm dần
+        usort($scoredRooms, function($a, $b) {
+            if ($a['similarity'] == $b['similarity']) return 0;
+            return ($a['similarity'] > $b['similarity']) ? -1 : 1;
+        });
+        
+        // Chỉ lấy top 3 phòng khớp nhất
+        $topRooms = array_slice($scoredRooms, 0, 3);
+        if (empty($topRooms)) {
+            return "Thông báo: Không tìm thấy phòng trọ nào thỏa mãn bộ lọc giá/khu vực.";
+        }
+        
+        // Sinh coordinates cho từng phòng để vẽ map ở frontend
+        foreach ($topRooms as &$tr) {
+            $tr['coords'] = getApproximateCoords($tr['diachi'], $tr['room_id'], $tr['lat'] ?? null, $tr['lng'] ?? null);
+        }
+        unset($tr);
+        
+        $GLOBALS['chatbot_matched_rooms'] = $topRooms;
+        
+        // Định dạng dữ liệu gửi lại cho LLM
+        $resultText = "Dưới đây là các phòng trọ khớp nhất tìm được bằng Vector Search:\n";
+        foreach ($topRooms as $tr) {
+            $statusVal = normalizeRoomStatusValue($tr['trangthai_phong'] ?? 'con_phong');
+            $statusText = 'Còn phòng';
+            if ($statusVal === 'da_coc') {
+                $statusText = 'Đã đặt cọc';
+            } elseif ($statusVal === 'da_thue') {
+                $statusText = 'Đã thuê';
+            }
+
+            $resultText .= "- ID: " . $tr['room_id'] . "\n";
+            $resultText .= "  Nguồn: " . $tr['source'] . "\n";
+            $resultText .= "  Tiêu đề: " . $tr['ten_phong'] . "\n";
+            $resultText .= "  Giá: " . number_format($tr['gia']) . " VNĐ/tháng\n";
+            $resultText .= "  Diện tích: " . $tr['dientich'] . " m2\n";
+            $resultText .= "  Địa chỉ: " . $tr['diachi'] . "\n";
+            $resultText .= "  Tiện nghi: " . $tr['tiennghi'] . "\n";
+            $resultText .= "  Tình trạng phòng: " . $statusText . "\n";
+            $resultText .= "  Mô tả: " . mb_substr(strip_tags($tr['mota']), 0, 120) . "...\n";
+            $resultText .= "  Độ khớp ngữ nghĩa: " . round($tr['similarity'] * 100, 1) . "%\n";
+            $resultText .= "  Thẻ hiển thị card bắt buộc dùng khi tư vấn: [ROOM:" . $tr['source'] . ":" . $tr['room_id'] . "]\n\n";
+        }
+        
+        return $resultText;
+        
+    } catch (Exception $e) {
+        return "Lỗi thực thi truy vấn tìm kiếm: " . $e->getMessage();
+    }
+}
+
+/**
+ * Hàm phân tích giá dạng chuỗi (2tr, 2 triệu, 2000000) thành số float
+ */
+function parsePriceString(string $priceStr): float {
+    $clean = str_replace([' ', ',', '.', 'đ', 'vnd', 'vnđ', '/tháng', '/thang'], '', mb_strtolower($priceStr, 'UTF-8'));
+    
+    if (mb_strpos($clean, 'triệu') !== false) {
+        $num = floatval(str_replace('triệu', '', $clean));
+        return $num * 1000000;
+    }
+    if (mb_strpos($clean, 'tr') !== false) {
+        $num = floatval(str_replace('tr', '', $clean));
+        return $num * 1000000;
+    }
+    if (mb_strpos($clean, 'nghìn') !== false) {
+        $num = floatval(str_replace('nghìn', '', $clean));
+        return $num * 1000;
+    }
+    if (mb_strpos($clean, 'nghin') !== false) {
+        $num = floatval(str_replace('nghin', '', $clean));
+        return $num * 1000;
+    }
+    if (mb_strpos($clean, 'k') !== false) {
+        $num = floatval(str_replace('k', '', $clean));
+        return $num * 1000;
+    }
+    
+    return floatval($clean);
+}
+?>

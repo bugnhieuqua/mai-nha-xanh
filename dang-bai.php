@@ -14,14 +14,20 @@ try {
     require_once 'config/database.php';
     $database = new Database();
     $db = $database->getConnection();
+    
+    $profile_name = $_SESSION['hoten'] ?? '';
+    
     $stmt = $db->prepare("SELECT ten_chunha, sdt_chunha FROM dangbai_chothuetro WHERE nguoidang = :username ORDER BY id DESC LIMIT 1");
     $stmt->execute([':username' => $_SESSION['username']]);
     $lastPost = $stmt->fetch(PDO::FETCH_ASSOC);
-    if ($lastPost) {
-        $ten_chunha = $lastPost['ten_chunha'] ?? '';
+    
+    // Chỉ tự động điền nếu bài đăng trước đó có tên trùng khớp với tên tài khoản hiện tại
+    if ($lastPost && !empty($lastPost['ten_chunha']) && trim($lastPost['ten_chunha']) === trim($profile_name)) {
+        $ten_chunha = $lastPost['ten_chunha'];
         $sdt_chunha = $lastPost['sdt_chunha'] ?? '';
     } else {
-        $ten_chunha = $_SESSION['hoten'] ?? '';
+        $ten_chunha = $profile_name;
+        $sdt_chunha = ''; // Để trống để không hiển thị số điện thoại của tài khoản khác
     }
 } catch (Exception $e) {
     // Bỏ qua lỗi
@@ -59,7 +65,7 @@ include 'includes/header.php';
                 <div class="form-row">
                     <div class="form-group">
                         <label for="gia"><i class="fas fa-money-bill-wave"></i> Giá thuê/tháng (VNĐ) <span class="required">*</span></label>
-                        <input type="number" id="gia" name="gia" class="form-control" placeholder="VD: 2000000" min="0" required>
+                        <input type="text" id="gia" name="gia" class="form-control" placeholder="VD: 2.000.000" required>
                     </div>
                     <div class="form-group">
                         <label for="dientich"><i class="fas fa-ruler-combined"></i> Diện tích (m²) <span class="required">*</span></label>
@@ -533,7 +539,7 @@ document.addEventListener("DOMContentLoaded", function() {
             formData.append("image", files[0]);
             
             try {
-                const res = await fetch("api/ai_autofill.php", {
+                const res = await fetch("api/v2/ai_vision_autofill.php", {
                     method: "POST",
                     body: formData
                 });
@@ -555,8 +561,9 @@ document.addEventListener("DOMContentLoaded", function() {
                             el.value = f.value;
                             el.dispatchEvent(new Event('input'));
                             
-                            // Hiệu ứng phát sáng
-                            el.style.boxShadow = "0 0 15px rgba(16, 185, 129, 0.6)";
+                            // Hiệu ứng phát sáng cao cấp
+                            el.style.transition = "all 0.5s ease";
+                            el.style.boxShadow = "0 0 20px rgba(16, 185, 129, 0.8)";
                             el.style.borderColor = "#10b981";
                             setTimeout(() => {
                                 el.style.boxShadow = "";
@@ -586,7 +593,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 } else {
                     Swal.fire({
                         icon: 'error',
-                        title: 'Lỗi phân tích',
+                        title: 'Kiểm duyệt hình ảnh',
                         text: result.message || 'AI không nhận dạng được hình ảnh này.',
                         confirmButtonColor: '#ef4444'
                     });
@@ -766,6 +773,15 @@ videoUploadArea.addEventListener('drop', function(e) {
     }
 });
 
+// Định dạng giá thuê nhập vào với dấu phân cách hàng nghìn (dấu .)
+const giaInput = document.getElementById('gia');
+if (giaInput) {
+    giaInput.addEventListener('input', function(e) {
+        let value = this.value.replace(/\D/g, '');
+        this.value = value.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    });
+}
+
 // Form Submit
 document.getElementById('postRoomForm').addEventListener('submit', async function(e) {
     e.preventDefault();
@@ -796,6 +812,9 @@ document.getElementById('postRoomForm').addEventListener('submit', async functio
     submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang gửi...';
     
     var formData = new FormData(this);
+    if (formData.has('gia')) {
+        formData.set('gia', formData.get('gia').replace(/\./g, ''));
+    }
     formData.delete('hinhanh[]');
     formData.delete('hinhanh');
     selectedImages.forEach(function(file) {

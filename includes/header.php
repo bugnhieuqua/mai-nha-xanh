@@ -675,6 +675,7 @@
         </script>
     </header>
 
+    <?php if (in_array(basename($_SERVER['PHP_SELF']), ['index.php', 'index.html'])): ?>
     <!-- ═══════════════════════════════════════════ -->
     <!-- PWA Install Banner                          -->
     <!-- ═══════════════════════════════════════════ -->
@@ -919,4 +920,5 @@
         });
     })();
     </script>
+    <?php endif; ?>
 
