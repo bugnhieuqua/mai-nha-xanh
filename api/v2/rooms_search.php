@@ -145,7 +145,7 @@ try {
     $stmt1 = $db->query("SELECT id, ten_phong, mota, hinhanh, '' as hinhanh_list, '' as video, gia, dientich, diachi, tiennghi, 'BQL' as ten_chunha, '0123456789' as sdt_chunha, ngaydang, trangthai, COALESCE(lat, 18.6923405) as lat, COALESCE(lng, 105.681627) as lng, 'phongtro' as nguon FROM phongtro");
     $rooms1 = $stmt1->fetchAll(PDO::FETCH_ASSOC);
 
-    $stmt2 = $db->query("SELECT id, tieude as ten_phong, mota, hinhanh, hinhanh_list, video, gia, dientich, diachi, tiennghi, ten_chunha, sdt_chunha, ngaydang, COALESCE(trangthai_phong, 'con_phong') as trangthai, COALESCE(lat, 18.6923405) as lat, COALESCE(lng, 105.681627) as lng, 'dangbai' as nguon FROM dangbai_chothuetro WHERE trangthai = 'da_duyet'");
+    $stmt2 = $db->query("SELECT id, tieude as ten_phong, mota, hinhanh, hinhanh_list, video, gia, dientich, diachi, tiennghi, ten_chunha, sdt_chunha, ngaydang, COALESCE(NULLIF(trangthai_phong, ''), 'con_phong') as trangthai, COALESCE(lat, 18.6923405) as lat, COALESCE(lng, 105.681627) as lng, 'dangbai' as nguon FROM dangbai_chothuetro WHERE trangthai = 'da_duyet'");
     $rooms2 = $stmt2->fetchAll(PDO::FETCH_ASSOC);
 
     $allRooms = array_merge($rooms1, $rooms2);

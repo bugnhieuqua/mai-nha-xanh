@@ -17,7 +17,7 @@ if (!chatBody || !messageInput || !sendMessageButton || !chatbotToggler) {
   // ==================================================================
   // API CONFIGURATION - SECURE PROXY (Bảo vệ Gemini API Key & Chống WAF)
   // ==================================================================
-  const PROXY_URL = "api/v2/chat.php";
+  const PROXY_URL = "api/v2/assistant_proxy.php";
   const userData = {
     message: null,
     file: {
@@ -432,7 +432,7 @@ if (!chatBody || !messageInput || !sendMessageButton || !chatbotToggler) {
     if (userData.file && userData.file.data) {
       imgFileForHistory = { ...userData.file };
       try {
-        const imgRes = await fetch("api/chatbot_image_handler.php", {
+        const imgRes = await fetch("api/assistant_image_handler.php", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -528,10 +528,7 @@ if (!chatBody || !messageInput || !sendMessageButton || !chatbotToggler) {
           });
         }
       } catch (jsonErr) {
-        // Encode rawText safe for innerHTML
-        let safeHTML = rawText.substring(0, 150).replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        let errDesc = `Máy chủ PHP trả về dạng chữ/HTML thay vì JSON. Chi tiết mã gốc: <br><br><code>${safeHTML}</code>`;
-        throw new Error(errDesc);
+        throw new Error("Hệ thống AI đang bận hoặc đang bảo trì. Vui lòng thử lại sau ít phút.");
       }
 
       if (!response.ok) {

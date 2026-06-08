@@ -26,3 +26,5 @@ logs/*.log
 
 File/
 Update/
+*.md
+test_debug.php

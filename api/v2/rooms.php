@@ -9,6 +9,7 @@ require_once __DIR__ . '/../../config/bootstrap.php';
 require_once __DIR__ . '/../../includes/room_status_helper.php';
 require_once __DIR__ . '/../../includes/ai_moderation_helper.php';
 require_once __DIR__ . '/../../includes/one_signal_helper.php';
+require_once __DIR__ . '/../../includes/media_helper.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
@@ -42,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $rooms1 = $stmt1->fetchAll(PDO::FETCH_ASSOC);
 
         // 2. Lấy bài đăng được duyệt từ dangbai_chothuetro
-        $stmt2 = $db->query("SELECT id, tieude as ten_phong, mota, hinhanh, hinhanh_list, video, gia, dientich, diachi, tiennghi, ten_chunha, sdt_chunha, ngaydang, COALESCE(trangthai_phong, 'con_phong') as trangthai, COALESCE(lat, 18.6923405) as lat, COALESCE(lng, 105.681627) as lng, 'dangbai' as nguon FROM dangbai_chothuetro WHERE trangthai = 'da_duyet'");
+        $stmt2 = $db->query("SELECT id, tieude as ten_phong, mota, hinhanh, hinhanh_list, video, gia, dientich, diachi, tiennghi, ten_chunha, sdt_chunha, ngaydang, COALESCE(NULLIF(trangthai_phong, ''), 'con_phong') as trangthai, COALESCE(lat, 18.6923405) as lat, COALESCE(lng, 105.681627) as lng, 'dangbai' as nguon FROM dangbai_chothuetro WHERE trangthai = 'da_duyet'");
         $rooms2 = $stmt2->fetchAll(PDO::FETCH_ASSOC);
 
         // Gộp danh sách
@@ -207,10 +208,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         }
 
 
-        $ext = pathinfo($name, PATHINFO_EXTENSION);
-        $fileName = 'room_' . time() . '_' . uniqid() . '_' . $idx . '.' . ($ext ?: 'jpg');
-        if (move_uploaded_file($tmp, $uploadDir . $fileName)) {
+        $fileName = compressAndUploadImage($tmp, $uploadDir, 'room', $idx, 1200, 1200, 80);
+        if ($fileName !== '') {
             $uploadedImages[] = 'uploads/rooms/' . $fileName;
+        } else {
+            foreach ($uploadedImages as $p) { if (file_exists('../../' . $p)) @unlink('../../' . $p); }
+            http_response_code(500);
+            echo json_encode(['success' => false, 'code' => 500, 'message' => 'Lỗi khi upload và xử lý ảnh phòng trọ.']);
+            exit;
         }
     }
 
@@ -220,9 +225,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     try {
         ensureDangbaiRoomStatusSchema($db);
 
+        // Thực hiện Geocoding lấy tọa độ và lưu cứng vào CSDL
+        $coords = geocodeAddress($diachi);
+        if (!$coords) {
+            $coords = getApproximateCoords($diachi, rand(1, 1000));
+        }
+        $lat = $coords['lat'];
+        $lng = $coords['lng'];
+
         // Lưu vào DB
-        $query = "INSERT INTO dangbai_chothuetro (tieude, mota, hinhanh, hinhanh_list, gia, dientich, diachi, tiennghi, ten_chunha, sdt_chunha, nguoidang, trangthai, trangthai_phong)
-                  VALUES (:tieude, :mota, :hinhanh, :hinhanh_list, :gia, :dientich, :diachi, :tiennghi, :ten_chunha, :sdt_chunha, :nguoidang, 'cho_duyet', 'con_phong')";
+        $query = "INSERT INTO dangbai_chothuetro (tieude, mota, hinhanh, hinhanh_list, gia, dientich, diachi, tiennghi, ten_chunha, sdt_chunha, nguoidang, trangthai, trangthai_phong, lat, lng)
+                  VALUES (:tieude, :mota, :hinhanh, :hinhanh_list, :gia, :dientich, :diachi, :tiennghi, :ten_chunha, :sdt_chunha, :nguoidang, 'cho_duyet', 'con_phong', :lat, :lng)";
         
         $stmt = $db->prepare($query);
         $stmt->bindParam(':tieude', $tieude);
@@ -237,6 +250,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $stmt->bindParam(':sdt_chunha', $sdt_chunha);
         $nguoidang = $_SESSION['username'];
         $stmt->bindParam(':nguoidang', $nguoidang);
+        $stmt->bindParam(':lat', $lat);
+        $stmt->bindParam(':lng', $lng);
 
         if ($stmt->execute()) {
             $new_id = $db->lastInsertId();

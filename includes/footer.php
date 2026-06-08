@@ -116,8 +116,12 @@
     </script>
     <?php endif; ?>
     <script>
-        window.CHATBOT_CONTEXT_ROOMS = "";
+        // Không ghi đè context nếu trang đã tự set (vd: phong-tro.php)
+        window.CHATBOT_CONTEXT_ROOMS = (typeof window.CHATBOT_CONTEXT_ROOMS !== 'undefined')
+            ? window.CHATBOT_CONTEXT_ROOMS
+            : "";
     </script>
+
     <script src="assets/js/assistant.js"></script>
 
     <script>

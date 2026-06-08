@@ -32,7 +32,7 @@ if ($isDebugOn) {
 $response = curl_exec($ch);
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 $error = curl_error($ch);
-curl_close($ch);
+// curl_close($ch);
 
 if ($error) {
     echo "<p style='color:red;'><b>Thất bại:</b> Lỗi cURL khi kết nối Google: " . htmlspecialchars($error) . "</p>";
@@ -66,7 +66,7 @@ if ($isDebugOn) {
 $response2 = curl_exec($ch2);
 $httpCode2 = curl_getinfo($ch2, CURLINFO_HTTP_CODE);
 $error2 = curl_error($ch2);
-curl_close($ch2);
+// curl_close($ch2);
 
 if ($error2) {
     echo "<p style='color:red;'><b>Thất bại:</b> Lỗi cURL khi kết nối Groq: " . htmlspecialchars($error2) . "</p>";
@@ -101,7 +101,7 @@ if (isset($_GET['trigger'])) {
     } elseif ($type === 'fatal') {
         echo "<p><b>Đang chạy lệnh lỗi Fatal:</b> Gọi hàm không tồn tại <code>ham_khong_ton_tai();</code></p>";
         // Kích hoạt Fatal Error
-        ham_khong_ton_tai();
+        // ham_khong_ton_tai();
     }
 }
 ?>

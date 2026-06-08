@@ -1,6 +1,7 @@
 <?php
 require_once '../config/database.php';
 require_once '../config/session.php';
+require_once '../includes/media_helper.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -51,13 +52,10 @@ if (!is_dir($uploadDir)) {
     mkdir($uploadDir, 0777, true);
 }
 
-// Tạo tên file độc nhất để tránh cache
-$ext = pathinfo($file['name'], PATHINFO_EXTENSION);
-if (!$ext) $ext = 'jpg';
-$filename = 'avatar_' . $_SESSION['user_id'] . '_' . time() . '.' . $ext;
-$targetPath = $uploadDir . $filename;
+// Tạo file ảnh đại diện được nén WebP kích thước nhỏ gọn 300x300
+$filename = compressAndUploadImage($file['tmp_name'], $uploadDir, 'avatar', $_SESSION['user_id'], 300, 300, 85);
 
-if (!move_uploaded_file($file['tmp_name'], $targetPath)) {
+if ($filename === '') {
     echo json_encode(['success' => false, 'message' => 'Không thể lưu file trên máy chủ.']);
     exit;
 }

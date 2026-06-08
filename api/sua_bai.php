@@ -31,6 +31,15 @@ if (!$id || !$tieude || !$gia || !$dientich || !$diachi) {
     echo json_encode(['success' => false, 'message' => 'Vui lòng điền đầy đủ thông tin bắt buộc']); exit;
 }
 
+// Thực hiện Geocoding lấy tọa độ và lưu cứng vào CSDL
+$coords = geocodeAddress($diachi);
+if (!$coords) {
+    $coords = getApproximateCoords($diachi, $id);
+}
+$lat = $coords['lat'];
+$lng = $coords['lng'];
+
+
 try {
     $database = new Database();
     $db = $database->getConnection();
@@ -47,7 +56,7 @@ try {
         $stmt = $db->prepare("UPDATE dangbai_chothuetro SET
             tieude = :tieude, gia = :gia, dientich = :dientich, diachi = :diachi,
             mota = :mota, tiennghi = :tiennghi, ten_chunha = :ten_chunha, sdt_chunha = :sdt_chunha,
-            trangthai = 'cho_duyet'
+            trangthai = 'cho_duyet', lat = :lat, lng = :lng
             WHERE id = :id AND nguoidang = :u");
         
         if ($stmt->execute([
@@ -59,6 +68,8 @@ try {
             ':tiennghi'   => $tiennghi,
             ':ten_chunha' => $ten_chunha,
             ':sdt_chunha' => $sdt_chunha,
+            ':lat'        => $lat,
+            ':lng'        => $lng,
             ':id'         => $id,
             ':u'          => $_SESSION['username'],
         ])) {
@@ -173,7 +184,7 @@ try {
 
         $stmt = $db->prepare("UPDATE phongtro SET
             ten_phong = :tieude, gia = :gia, dientich = :dientich, diachi = :diachi,
-            mota = :mota, tiennghi = :tiennghi, sdt_chunha = :sdt_chunha
+            mota = :mota, tiennghi = :tiennghi, sdt_chunha = :sdt_chunha, lat = :lat, lng = :lng
             WHERE id = :id AND user_id = :uid");
         $stmt->execute([
             ':tieude'   => $tieude,
@@ -183,6 +194,8 @@ try {
             ':mota'     => $mota,
             ':tiennghi' => $tiennghi,
             ':sdt_chunha' => $sdt_chunha,
+            ':lat'      => $lat,
+            ':lng'      => $lng,
             ':id'       => $id,
             ':uid'      => $user['id'],
         ]);

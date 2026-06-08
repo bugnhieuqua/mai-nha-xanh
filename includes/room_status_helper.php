@@ -32,10 +32,7 @@ function ensureDangbaiRoomStatusSchema(PDO $db): void
 
     try {
         $db->exec("UPDATE dangbai_chothuetro
-                   SET trangthai = CASE
-                       WHEN duyet_luc IS NOT NULL THEN 'da_duyet'
-                       ELSE 'cho_duyet'
-                   END
+                   SET trangthai = 'da_duyet'
                    WHERE trangthai IN ('con_phong','da_coc','da_thue')");
     } catch (Exception $e) {}
 
@@ -59,6 +56,11 @@ function ensureDangbaiRoomStatusSchema(PDO $db): void
     try { $db->exec("ALTER TABLE dangbai_chothuetro ADD COLUMN lat DECIMAL(10, 8) DEFAULT 18.6923405"); } catch (Exception $e) {}
     try { $db->exec("ALTER TABLE dangbai_chothuetro ADD COLUMN lng DECIMAL(11, 8) DEFAULT 105.681627"); } catch (Exception $e) {}
     try { $db->exec("ALTER TABLE dangbai_chothuetro ADD COLUMN video VARCHAR(255) DEFAULT ''"); } catch (Exception $e) {}
+
+    try {
+        // Cập nhật lại các phòng bị chuyển sang cho_duyet nhầm do thiếu duyet_luc
+        $db->exec("UPDATE dangbai_chothuetro SET trangthai = 'da_duyet' WHERE trangthai = 'cho_duyet'");
+    } catch (Exception $e) {}
 
     $done = true;
 }
@@ -172,46 +174,104 @@ if (!function_exists('mb_strpos')) {
     }
 }
 
-// Hàm tính tọa độ xấp xỉ theo địa chỉ để định vị chính xác phòng trọ trên bản đồ
-function getApproximateCoords($diachi, $id, $storedLat = null, $storedLng = null) {
+// Hàm thực hiện Geocoding qua OpenStreetMap Nominatim API (chỉ gọi khi tạo/sửa bài đăng)
+function geocodeAddress($diachi) {
+    $address = trim($diachi);
+    if (empty($address)) {
+        return null;
+    }
+    
+    // Tối ưu địa chỉ tìm kiếm địa điểm TP. Vinh, Nghệ An
+    $searchAddress = $address;
+    if (mb_stripos($searchAddress, 'Vinh') === false) {
+        $searchAddress .= ', Vinh, Nghệ An, Vietnam';
+    } elseif (mb_stripos($searchAddress, 'Nghệ An') === false) {
+        $searchAddress .= ', Nghệ An, Vietnam';
+    }
+    
+    $url = 'https://nominatim.openstreetmap.org/search?q=' . urlencode($searchAddress) . '&format=json&limit=1';
+    
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 3); // Timeout nhanh 3 giây
+    curl_setopt($ch, CURLOPT_USERAGENT, 'MaiNhaXanhRoomGeocoder/1.0 (contact@mainhaxanh.com)');
+    
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    
+    if ($httpCode === 200 && !empty($response)) {
+        $data = json_decode($response, true);
+        if (!empty($data) && isset($data[0]['lat']) && isset($data[0]['lon'])) {
+            return [
+                'lat' => floatval($data[0]['lat']),
+                'lng' => floatval($data[0]['lon'])
+            ];
+        }
+    }
+    return null;
+}
+
+// Hàm tính tọa độ xấp xỉ theo địa chỉ để định vị chính xác phòng trọ trên bản đồ (HOÀN TOÀN OFFLINE)
+function getApproximateCoords($diachi, $id, $storedLat = null, $storedLng = null, $source = 'phongtro') {
     $storedLatVal = floatval($storedLat);
     $storedLngVal = floatval($storedLng);
+    
     if (!empty($storedLat) && !empty($storedLng) && 
         $storedLatVal != 18.6734 && $storedLngVal != 105.6812 &&
-        $storedLatVal != 18.6923405 && $storedLngVal != 105.681627) {
+        $storedLatVal != 18.6923405 && $storedLngVal != 105.681627 &&
+        $storedLatVal != 0 && $storedLngVal != 0) {
         return [
             'lat' => $storedLatVal,
             'lng' => $storedLngVal
         ];
     }
     
+    $address = trim($diachi);
     // Mặc định: Trường Đại học Kinh tế Nghệ An (TP. Vinh)
     $lat = 18.6923405;
     $lng = 105.681627;
     
-    $clean = mb_strtolower($diachi, 'UTF-8');
-    
-    if (mb_strpos($clean, 'hưng dũng') !== false) {
-        $lat = 18.6852;
-        $lng = 105.6983;
-    } elseif (mb_strpos($clean, 'bến thủy') !== false) {
-        $lat = 18.6580;
-        $lng = 105.6935;
-    } elseif (mb_strpos($clean, 'hà huy tập') !== false || mb_strpos($clean, 'lý tự trọng') !== false) {
-        $lat = 18.6923405;
-        $lng = 105.681627;
-    } elseif (mb_strpos($clean, 'lê lợi') !== false) {
-        $lat = 18.6882;
-        $lng = 105.6762;
-    } elseif (mb_strpos($clean, 'quang trung') !== false) {
-        $lat = 18.6791;
-        $lng = 105.6781;
-    } elseif (mb_strpos($clean, 'vinh phú') !== false || mb_strpos($clean, 'yên toàn') !== false) {
-        $lat = 18.6915;
-        $lng = 105.6802;
-    } elseif (mb_strpos($clean, 'hồng sơn') !== false) {
-        $lat = 18.6675;
-        $lng = 105.6821;
+    if (!empty($address)) {
+        $clean = mb_strtolower($address, 'UTF-8');
+        
+        if (mb_strpos($clean, 'hưng dũng') !== false) {
+            $lat = 18.6815; $lng = 105.7020;
+        } elseif (mb_strpos($clean, 'bến thủy') !== false) {
+            $lat = 18.6575; $lng = 105.6942;
+        } elseif (mb_strpos($clean, 'hà huy tập') !== false || mb_strpos($clean, 'lý tự trọng') !== false) {
+            $lat = 18.6965; $lng = 105.6795;
+        } elseif (mb_strpos($clean, 'lê lợi') !== false) {
+            $lat = 18.6885; $lng = 105.6720;
+        } elseif (mb_strpos($clean, 'quang trung') !== false) {
+            $lat = 18.6765; $lng = 105.6765;
+        } elseif (mb_strpos($clean, 'vinh phú') !== false || mb_strpos($clean, 'yên toàn') !== false) {
+            $lat = 18.6915; $lng = 105.6802;
+        } elseif (mb_strpos($clean, 'hồng sơn') !== false) {
+            $lat = 18.6670; $lng = 105.6820;
+        } elseif (mb_strpos($clean, 'hưng bình') !== false) {
+            $lat = 18.6845; $lng = 105.6785;
+        } elseif (mb_strpos($clean, 'hưng phúc') !== false) {
+            $lat = 18.6925; $lng = 105.6885;
+        } elseif (mb_strpos($clean, 'lê mao') !== false) {
+            $lat = 18.6725; $lng = 105.6800;
+        } elseif (mb_strpos($clean, 'quán bàu') !== false) {
+            $lat = 18.7040; $lng = 105.6685;
+        } elseif (mb_strpos($clean, 'trung đô') !== false) {
+            $lat = 18.6565; $lng = 105.6830;
+        } elseif (mb_strpos($clean, 'trường thi') !== false) {
+            $lat = 18.6675; $lng = 105.6925;
+        } elseif (mb_strpos($clean, 'đông vĩnh') !== false) {
+            $lat = 18.6885; $lng = 105.6550;
+        } elseif (mb_strpos($clean, 'hưng lộc') !== false || mb_strpos($clean, 'lê viết thuật') !== false) {
+            $lat = 18.6885; $lng = 105.7195;
+        } elseif (mb_strpos($clean, 'nghi phú') !== false) {
+            $lat = 18.7115; $lng = 105.6960;
+        } elseif (mb_strpos($clean, 'cửa nam') !== false) {
+            $lat = 18.6720; $lng = 105.6675;
+        } elseif (mb_strpos($clean, 'đội cung') !== false) {
+            $lat = 18.6775; $lng = 105.6685;
+        }
     }
     
     // Tạo độ lệch nhỏ ngẫu nhiên theo ID để tránh các ghim trùng nhau xếp chồng khít

@@ -5,6 +5,7 @@ header('Access-Control-Allow-Origin: *');
 require_once '../config/database.php';
 require_once '../config/session.php';
 require_once '../includes/room_status_helper.php';
+require_once '../includes/media_helper.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['success' => false, 'message' => 'Phương thức không hợp lệ']);
@@ -117,22 +118,10 @@ foreach ($imageIndexes as $idx) {
         exit;
     }
 
-    $ext = strtolower(pathinfo((string)$origName, PATHINFO_EXTENSION));
-    if ($ext === '') {
-        $ext = match ($mime) {
-            'image/jpeg' => 'jpg',
-            'image/png' => 'png',
-            'image/gif' => 'gif',
-            'image/webp' => 'webp',
-            default => 'jpg'
-        };
-    }
-
-    $fileName = 'room_' . time() . '_' . uniqid('', true) . '_' . $idx . '.' . $ext;
-    $filePath = $uploadDir . $fileName;
-    if (!move_uploaded_file($tmp, $filePath)) {
+    $fileName = compressAndUploadImage($tmp, $uploadDir, 'room', $idx, 1200, 1200, 80);
+    if ($fileName === '') {
         foreach ($uploadedImages as $p) { if (file_exists('../' . $p)) @unlink('../' . $p); }
-        echo json_encode(['success' => false, 'message' => 'Lỗi khi upload ảnh phòng trọ']);
+        echo json_encode(['success' => false, 'message' => 'Lỗi khi upload và xử lý ảnh phòng trọ']);
         exit;
     }
     $uploadedImages[] = 'uploads/rooms/' . $fileName;
@@ -206,8 +195,16 @@ try {
     try { $db->exec("ALTER TABLE dangbai_chothuetro ADD COLUMN video VARCHAR(255) DEFAULT ''"); } catch (Exception $e) {}
     try { $db->exec("ALTER TABLE dangbai_chothuetro ADD COLUMN hinhanh_list TEXT NULL"); } catch (Exception $e) {}
 
-    $query = "INSERT INTO dangbai_chothuetro (tieude, mota, hinhanh, hinhanh_list, video, gia, dientich, diachi, tiennghi, ten_chunha, sdt_chunha, nguoidang, trangthai, trangthai_phong)
-              VALUES (:tieude, :mota, :hinhanh, :hinhanh_list, :video, :gia, :dientich, :diachi, :tiennghi, :ten_chunha, :sdt_chunha, :nguoidang, 'cho_duyet', 'con_phong')";
+    // Thực hiện Geocoding lấy tọa độ và lưu cứng vào CSDL
+    $coords = geocodeAddress($diachi);
+    if (!$coords) {
+        $coords = getApproximateCoords($diachi, rand(1, 1000));
+    }
+    $lat = $coords['lat'];
+    $lng = $coords['lng'];
+
+    $query = "INSERT INTO dangbai_chothuetro (tieude, mota, hinhanh, hinhanh_list, video, gia, dientich, diachi, tiennghi, ten_chunha, sdt_chunha, nguoidang, trangthai, trangthai_phong, lat, lng)
+              VALUES (:tieude, :mota, :hinhanh, :hinhanh_list, :video, :gia, :dientich, :diachi, :tiennghi, :ten_chunha, :sdt_chunha, :nguoidang, 'cho_duyet', 'con_phong', :lat, :lng)";
 
     $stmt = $db->prepare($query);
     $stmt->bindParam(':tieude', $tieude);
@@ -223,6 +220,8 @@ try {
     $stmt->bindParam(':sdt_chunha', $sdt_chunha);
     $nguoidang = $_SESSION['username'];
     $stmt->bindParam(':nguoidang', $nguoidang);
+    $stmt->bindParam(':lat', $lat);
+    $stmt->bindParam(':lng', $lng);
 
     if ($stmt->execute()) {
         $new_id = $db->lastInsertId();
