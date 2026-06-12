@@ -1,48 +1,66 @@
-# BÁO CÁO NGHIỆM THU - DỰ ÁN MÁI NHÀ XANH
+# BÁO CÁO NGHIỆM THU CHI TIẾT - DỰ ÁN MÁI NHÀ XANH
 
-Tài liệu này tổng hợp toàn bộ các nội dung thay đổi, sửa lỗi và nâng cấp đã được thực hiện trong dự án Mái Nhà Xanh cho hệ thống Chatbot RAG và Server Realtime.
-
----
-
-## 1. NÂNG CẤP & SỬA LỖI HỆ THỐNG AI CHATBOT (RAG)
-
-### Sửa lỗi kết nối & Khắc phục mã lỗi HTTP 503/500:
-- Sửa lỗi truy vấn CSDL trong [api/v2/chatbot_room_stats.php](file:///c:/Users/Dai%20Thang/Downloads/mai-nha-xanh/api/v2/chatbot_room_stats.php): Thay thế cột không tồn tại `trangthai_phong` thành `trangthai` khi truy vấn bảng `phongtro`, giải quyết triệt để lỗi HTTP 500 phát sinh khi chatbot đếm số lượng phòng.
-- Khắc phục lỗi cú pháp SQL trích xuất quote tại bộ lọc trạng thái phòng trong hành động `get_room_list` (thay thế lỗi dùng `$db->quote($filter_status)[1]` bằng việc sử dụng trực tiếp `$db->quote($filter_status)`).
-- Sửa lỗi cURL SSL Verification trên môi trường localhost/cá nhân trong [includes/ai_helper.php](file:///c:/Users/Dai%20Thang/Downloads/mai-nha-xanh/includes/ai_helper.php) và [api/v2/assistant_proxy.php](file:///c:/Users/Dai%20Thang/Downloads/mai-nha-xanh/api/v2/assistant_proxy.php) để ngăn ngừa lỗi không kết nối được tới dịch vụ Embedding.
-- Sửa lỗi PHP `getenv()` trả về giá trị `false` thay vì `null` trong [api/v2/assistant_proxy.php](file:///c:/Users/Dai%20Thang/Downloads/mai-nha-xanh/api/v2/assistant_proxy.php) khiến cấu hình model AI mặc định nhận giá trị sai.
-
-### Cơ chế dự phòng AI Provider nâng cao (Auto-Fallback):
-- Triển khai cơ chế dự phòng đa nhà cung cấp ở cả hai vòng gọi (Round 1 và Round 2) trong [api/v2/assistant_proxy.php](file:///c:/Users/Dai%20Thang/Downloads/mai-nha-xanh/api/v2/assistant_proxy.php): Hệ thống sẽ tự động quét và thử lần lượt qua **Groq → OpenAI → Gemini** nếu nhà cung cấp chính bị quá tải/giới hạn lượt gọi (HTTP 429 Rate Limit) hoặc hết số dư tài khoản.
-- Tích hợp thêm **Google Gemini (gemini-2.5-flash)** thông qua cổng kết nối tương thích với định dạng của OpenAI làm nhà cung cấp dự phòng thứ ba, giúp chatbot chạy ổn định 24/7.
-
-### Nâng cấp Prompt thông minh & Định dạng hiển thị:
-- Cập nhật hệ thống Prompt cốt lõi trong [config/chatbot_prompt.php](file:///c:/Users/Dai%20Thang/Downloads/mai-nha-xanh/config/chatbot_prompt.php) để xử lý riêng biệt các câu hỏi:
-  - **Câu hỏi chung chung** (Ví dụ: *"còn bao nhiêu phòng"*, *"trạng thái phòng"*): Chatbot trả lời đầy đủ số lượng tổng kèm breakdown chi tiết của từng loại trạng thái (trống, cọc) phân dòng bằng dấu `-`.
-  - **Câu hỏi riêng biệt về phòng trống** (Ví dụ: *"còn bao nhiêu phòng trống"*, *"phòng trống"*): Chatbot chỉ trả lời duy nhất số lượng phòng trống (Ví dụ: *Dạ hiện tại hệ thống còn 37 phòng trống.*), tuyệt đối không đưa thêm thông tin phòng đã cọc hay đã thuê vào gây loãng.
-- Loại bỏ hoàn toàn các ký tự dấu sao `*` trang trí trong văn bản đầu ra của chatbot để hiển thị giao diện chữ thuần sạch sẽ, thoáng mát.
-- Sửa lỗi cú pháp dấu nháy kép `"` nằm trong các ví dụ của prompt gây lỗi biên dịch PHP.
-
-### Tối ưu hóa UI Frontend Chatbot:
-- Cập nhật [assets/js/assistant.js](file:///c:/Users/Dai%20Thang/Downloads/mai-nha-xanh/assets/js/assistant.js) để bóc tách thông báo lỗi chi tiết (`data.message`) do server trả về hiển thị trực tiếp lên khung chat thay vì hiển thị thông tin chung chung `"Lỗi kết nối (HTTP 503)"`.
-- Đồng bộ hóa bộ nhớ đệm lịch sử chat giữa `localStorage` và `sessionStorage` trong [includes/chatbot.php](file:///c:/Users/Dai%20Thang/Downloads/mai-nha-xanh/includes/chatbot.php) và [assets/js/assistant.js](file:///c:/Users/Dai%20Thang/Downloads/mai-nha-xanh/assets/js/assistant.js).
-- Bổ sung nút **"Làm mới chat" 🗑️ (Clear History)** để người dùng xóa bộ nhớ đệm và sửa lỗi kẹt lịch sử hội thoại.
+Báo cáo này tổng hợp đầy đủ các hạng mục nâng cấp, sửa đổi, sửa lỗi và cấu hình triển khai hệ thống phần mềm Mái Nhà Xanh (bao gồm Trợ lý AI Chatbot thông minh và Máy chủ Realtime).
 
 ---
 
-## 2. TRIỂN KHAI MÁY CHỦ REALTIME LÊN RENDER
+## 1. HỆ THỐNG TRỢ LÝ AI CHATBOT (RAG & VISION)
 
-### Cấu hình biến môi trường động cho Server Node.js:
-- Cải tiến mã nguồn [backend_realtime/server.js](file:///c:/Users/Dai%20Thang/Downloads/mai-nha-xanh/backend_realtime/server.js) để ưu tiên nhận cấu hình `PHP_API_BASE` (URL gốc của ứng dụng web PHP chính) từ biến môi trường hệ thống (`process.env.PHP_API_BASE` hoặc `process.env.APP_URL`) trước khi tìm kiếm trong file `.env` cục bộ. Việc này giúp deploy thành công và kết nối nhanh gọn qua Dashboard của Render.
+### Thiết lập Persona và Quy tắc phản hồi của "Môi giới ảo":
+- Xây dựng nhân vật Trợ lý Môi giới ảo chuyên nghiệp, lịch sự, đĩnh đạc và am hiểu thị trường phòng trọ tại TP. Vinh, Nghệ An.
+- Loại bỏ triệt để các ký tự định dạng Markdown dấu sao `*` hoặc `**` khỏi câu trả lời của AI để văn bản hiển thị sạch sẽ, không bị vỡ giao diện trên các trình duyệt cũ.
+- Quy định định dạng liệt kê: Toàn bộ thông tin mô tả chi tiết, so sánh, giá cả, và danh sách tiện nghi bắt buộc phải xuống dòng và phân dòng bằng dấu gạch đầu dòng `-`.
+- Cú pháp Card tương tác: AI bắt buộc phải chèn thẻ dạng `[ROOM:nguon:id]` (Ví dụ: `[ROOM:phongtro:3]`) vào cuối mô tả để Frontend tự động render thành thẻ phòng trực quan (có ảnh, giá, địa chỉ, bản đồ, nút so sánh).
 
-### Kết nối hai Host (liveblog365 & Render):
-- Cấu hình truyền biến môi trường `REALTIME_SERVER_URL` từ file `.env` của PHP xuống Javascript thông qua [includes/header.php](file:///c:/Users/Dai%20Thang/Downloads/mai-nha-xanh/includes/header.php).
-- Sửa đổi [assets/js/chat-realtime.js](file:///c:/Users/Dai%20Thang/Downloads/mai-nha-xanh/assets/js/chat-realtime.js) để kết nối trực tiếp và động đến link Render (`REALTIME_SERVER_URL`) trên production và tự động fallback về `http://localhost:3000` khi phát triển local mà không cần sửa code tay.
-- Sửa đổi tệp [.gitignore](file:///c:/Users/Dai%20Thang/Downloads/mai-nha-xanh/.gitignore) để bỏ qua các thư mục `node_modules` phát sinh trong tương lai.
-- Loại bỏ hoàn toàn thư mục `node_modules/` khổng lồ đã lỡ commit khỏi Git tracking để tối ưu hóa dung lượng repository.
+### Sửa lỗi SQL đếm phòng & Thống kê phòng trọ:
+- Sửa lỗi cột `trangthai_phong` trong [api/v2/chatbot_room_stats.php](file:///c:/Users/Dai%20Thang/Downloads/mai-nha-xanh/api/v2/chatbot_room_stats.php): Bảng `phongtro` chỉ có cột `trangthai` chứ không có cột `trangthai_phong` như bảng `dangbai_chothuetro`. Đã đổi tất cả tham chiếu sang `trangthai` cho bảng `phongtro`.
+- Sửa lỗi logic lấy SQL quote khi lọc danh sách phòng theo trạng thái (từ lỗi sử dụng phần tử mảng `$db->quote($filter_status)[1]` sang `$db->quote($filter_status)`).
+- Sửa lỗi Fatal Error trong [api/v2/chatbot_room_stats.php](file:///c:/Users/Dai%20Thang/Downloads/mai-nha-xanh/api/v2/chatbot_room_stats.php) do khai báo trùng hàm `getDB()` với hệ thống bootstrap.
+- Cải tiến thuật toán xử lý chuỗi truy vấn: Phân tách rõ ràng câu hỏi chung chung (trả về breakdown chi tiết các loại trạng thái phòng bằng dấu `-`) và câu hỏi riêng biệt về phòng trống (chỉ trả về duy nhất số lượng phòng trống thực tế, tuyệt đối không đưa số liệu phòng cọc vào để tránh gây nhiễu).
+
+### Cơ chế dự phòng API thông minh (AI Multi-Provider Fallback):
+- Khắc phục triệt để lỗi HTTP 503 bằng cách thêm Google Gemini (`gemini-2.5-flash`) qua endpoint tương thích OpenAI vào danh sách AI Provider.
+- Cải tiến cơ chế gọi API ở cả Round 1 và Round 2 trong [api/v2/assistant_proxy.php](file:///c:/Users/Dai%20Thang/Downloads/mai-nha-xanh/api/v2/assistant_proxy.php): Nếu nhà cung cấp chính (Groq) trả về lỗi HTTP 429 (Rate Limit do tài khoản Free hết token trong ngày) hoặc OpenAI trả về lỗi hết hạn mức thanh toán, hệ thống sẽ tự động gọi tiếp sang Gemini để hoàn tất cuộc hội thoại.
+- Sửa lỗi PHP `getenv()` trả về giá trị `false` thay vì `null` làm gán sai giá trị của tên model AI.
+
+### Phân tích hình ảnh Đa phương thức (Gemini Vision):
+- Thiết lập quy trình xử lý hình ảnh tải lên của khách hàng trong [assets/js/assistant.js](file:///c:/Users/Dai%20Thang/Downloads/mai-nha-xanh/assets/js/assistant.js): Ảnh được gửi lên qua proxy mô tả ảnh bằng Gemini Vision, sau đó chuyển kết quả dạng text `[Hình ảnh phòng trọ: <Mô tả>]` làm ngữ cảnh đầu vào cho LLM để AI đánh giá nội thất, không gian và gợi ý phòng trọ tương tự.
+
+### Bảo mật & Chống tấn công Prompt Injection:
+- Xây dựng server-side firewall trong [api/v2/assistant_proxy.php](file:///c:/Users/Dai%20Thang/Downloads/mai-nha-xanh/api/v2/assistant_proxy.php) để quét và chặn các hành vi can thiệp hệ thống, jailbreak, yêu cầu tiết lộ System Prompt bằng cách trả về HTTP 400.
 
 ---
 
-## 3. CƠ SỞ DỮ LIỆU & ĐỒNG BỘ VECTOR
-- Giải quyết lỗi Fatal Error do khai báo trùng lặp hàm `getDB()` trong [api/v2/chatbot_room_stats.php](file:///c:/Users/Dai%20Thang/Downloads/mai-nha-xanh/api/v2/chatbot_room_stats.php).
-- Thực thi lệnh đồng bộ hóa vector `php scripts/sync_embeddings.php` thành công, lưu trữ toàn bộ các phòng trọ hiện có vào bảng `room_embeddings` để chatbot thực hiện tìm kiếm ngữ nghĩa chính xác.
+## 2. CHAT CHUYÊN BIỆT & ĐỒNG BỘ REALTIME (NODE.JS & WEBSOCKET)
+
+### Tách biệt hoàn toàn AI Chatbot và Support Chat:
+- Kiến trúc cô lập hoàn toàn phiên trò chuyện của Trợ lý AI và kênh chat hỗ trợ của admin/chủ trọ.
+- Trợ lý AI chỉ phản hồi trong phạm vi session được chỉ định, không can thiệp vào các cuộc hội thoại riêng tư giữa khách hàng và tư vấn viên con người.
+
+### Cấu hình deploy động cho Server Realtime Node.js:
+- Sửa đổi [backend_realtime/server.js](file:///c:/Users/Dai%20Thang/Downloads/mai-nha-xanh/backend_realtime/server.js) để ưu tiên đọc URL API gốc PHP thông qua các biến môi trường của Render (`process.env.PHP_API_BASE` hoặc `process.env.APP_URL`) thay vị chỉ đọc từ tệp cấu hình `.env` cục bộ.
+
+### Đồng bộ hóa cross-host động (Localhost & Production):
+- Tích hợp biến `REALTIME_SERVER_URL` trong file `.env` phía PHP và tự động truyền xuống giao diện client thông qua [includes/header.php](file:///c:/Users/Dai%20Thang/Downloads/mai-nha-xanh/includes/header.php).
+- Sửa đổi [assets/js/chat-realtime.js](file:///c:/Users/Dai%20Thang/Downloads/mai-nha-xanh/assets/js/chat-realtime.js) để kết nối trực tiếp đến địa chỉ WebSocket trên Render khi chạy trên server production, đồng thời tự động nhận diện chạy trên cổng `http://localhost:3000` khi phát triển local.
+- Dọn dẹp mã nguồn: Cập nhật file `.gitignore` để chặn việc commit thư mục `node_modules` và xóa toàn bộ các gói thư viện Node.js thừa thãi đang theo dõi trong kho Git.
+
+---
+
+## 3. CÁC TỐI ƯU HÓA FRONTEND UX & HỆ THỐNG THÔNG BÁO
+
+### Tối ưu hóa chuyển văn bản thành giọng nói (TTS) & STT:
+- Tăng tốc độ phát âm thanh phản hồi bằng giọng nói tiếng Việt chuẩn cục bộ (Microsoft An / Google Vi) trong [assets/js/assistant.js](file:///c:/Users/Dai%20Thang/Downloads/mai-nha-xanh/assets/js/assistant.js) với độ trễ phản hồi dưới 0.1 giây.
+- Triển khai thuật toán duy trì kết nối SpeechSynthesis (Heartbeat timer) nhằm khắc phục bug trình duyệt Chrome tự ngắt tiếng khi phát đoạn văn dài.
+- Xây dựng canvas sóng âm thanh động mô phỏng trong quá trình kích hoạt chức năng nhận diện giọng nói (Speech-to-Text).
+
+### Hệ thống thông báo đẩy & Sidebar:
+- Thiết lập đồng bộ số lượng thông báo chưa đọc hiển thị dạng Badge đỏ trên thanh Sidebar của trang quản trị admin.
+- Tích hợp chuông báo âm thanh nhẹ và Popup Toast hiển thị ở góc màn hình khi người dùng nhận được tin nhắn hoặc phản hồi mới.
+- Hỗ trợ đầy đủ các tính năng đánh dấu đã đọc hoặc xóa toàn bộ thông báo.
+
+---
+
+## 4. ĐỒNG BỘ VECTOR EMBEDDINGS TRONG HỆ THỐNG
+- Sửa lỗi kết nối database và chạy thành công script `php scripts/sync_embeddings.php`.
+- Tạo vector index và lưu trữ embeddings cho tất cả **43 phòng trọ** vào bảng `room_embeddings` trong MySQL để phục vụ tính năng tìm kiếm ngữ nghĩa Cosine Similarity.
