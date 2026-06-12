@@ -507,7 +507,7 @@ function selectSession(s) {
 async function loadMessages() {
     if (!currentSession) return;
     try {
-        let url = `../api/get_messages.php?session_id=${encodeURIComponent(currentSession.session_id)}&chat_type=support&mark_read=1`;
+        let url = `../api/get-messages.php?session_id=${encodeURIComponent(currentSession.session_id)}&chat_type=support&mark_read=1`;
         if (lastMsgTime) url += `&since=${encodeURIComponent(lastMsgTime)}`;
         const res = await fetch(url);
         const data = await res.json();

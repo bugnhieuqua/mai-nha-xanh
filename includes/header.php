@@ -183,40 +183,46 @@
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
     <script>
       window.OneSignalDeferred = window.OneSignalDeferred || [];
-      OneSignalDeferred.push(async function(OneSignal) {
-        await OneSignal.init({
-          appId: "b8fdf8dc-ae62-4636-96e3-d52edaef7bd3",
-          serviceWorkerPath: 'sw.php',
-          notifyButton: {
-            enable: true, size: 'medium', position: 'bottom-left',
-            text: {
-                'tip.state.unsubscribed': 'Đăng ký nhận tin trọ mới',
-                'tip.state.subscribed': "Bạn đã đăng ký nhận tin",
-                'tip.state.blocked': "Bạn đã chặn thông báo",
-                'message.prenotify': 'Nhấn để đăng ký nhận thông báo khi có phòng trọ mới!',
-                'message.action.subscribed': "Cảm ơn bạn đã đăng ký!",
-                'message.action.resubscribed': "Bạn đã đăng ký lại thành công",
-                'message.action.unsubscribed': "Bạn đã hủy đăng ký",
-                'dialog.main.title': 'Quản lý thông báo',
-                'dialog.main.button.subscribe': 'ĐĂNG KÝ',
-                'dialog.main.button.unsubscribe': 'HỦY ĐĂNG KÝ',
-                'dialog.blocked.title': 'Mở khóa thông báo',
-                'dialog.blocked.message': "Vui lòng làm theo hướng dẫn để mở lại thông báo."
+      // Chỉ khởi tạo OneSignal trên môi trường production để tránh lỗi domain trên localhost
+      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      if (!isLocalhost) {
+        OneSignalDeferred.push(async function(OneSignal) {
+          await OneSignal.init({
+            appId: "b8fdf8dc-ae62-4636-96e3-d52edaef7bd3",
+            serviceWorkerPath: 'sw.php',
+            notifyButton: {
+              enable: true, size: 'medium', position: 'bottom-left',
+              text: {
+                  'tip.state.unsubscribed': 'Đăng ký nhận tin trọ mới',
+                  'tip.state.subscribed': "Bạn đã đăng ký nhận tin",
+                  'tip.state.blocked': "Bạn đã chặn thông báo",
+                  'message.prenotify': 'Nhấn để đăng ký nhận thông báo khi có phòng trọ mới!',
+                  'message.action.subscribed': "Cảm ơn bạn đã đăng ký!",
+                  'message.action.resubscribed': "Bạn đã đăng ký lại thành công",
+                  'message.action.unsubscribed': "Bạn đã hủy đăng ký",
+                  'dialog.main.title': 'Quản lý thông báo',
+                  'dialog.main.button.subscribe': 'ĐĂNG KÝ',
+                  'dialog.main.button.unsubscribe': 'HỦY ĐĂNG KÝ',
+                  'dialog.blocked.title': 'Mở khóa thông báo',
+                  'dialog.blocked.message': "Vui lòng làm theo hướng dẫn để mở lại thông báo."
+              }
             }
-          }
-        });
+          });
 
-        // Gán nhãn cho người dùng để gửi thông báo đúng đối tượng (Admin / User)
-        <?php if(isset($_SESSION['user_id'])): ?>
-            OneSignal.login("<?= $_SESSION['user_id'] ?>");
-            <?php if(isset($_SESSION['role'])): ?>
-                if (OneSignal.User) OneSignal.User.addTag("role", "<?= $_SESSION['role'] ?>");
-            <?php endif; ?>
-        <?php else: ?>
-            OneSignal.logout();
-            if (OneSignal.User) OneSignal.User.removeTag("role");
-        <?php endif; ?>
-      });
+          // Gán nhãn cho người dùng để gửi thông báo đúng đối tượng (Admin / User)
+          <?php if(isset($_SESSION['user_id'])): ?>
+              OneSignal.login("<?= $_SESSION['user_id'] ?>");
+              <?php if(isset($_SESSION['role'])): ?>
+                  if (OneSignal.User) OneSignal.User.addTag("role", "<?= $_SESSION['role'] ?>");
+              <?php endif; ?>
+          <?php else: ?>
+              OneSignal.logout();
+              if (OneSignal.User) OneSignal.User.removeTag("role");
+          <?php endif; ?>
+        });
+      } else {
+        console.log('[OneSignal] Bỏ qua khởi tạo OneSignal trên môi trường localhost.');
+      }
     </script>
 </head>
 <style>
@@ -342,6 +348,9 @@
                     <li><a href="gioi-thieu.php" class="<?php echo basename($_SERVER['PHP_SELF']) == 'gioi-thieu.php' ? 'active' : ''; ?>">Giới thiệu</a></li>
                     <li><a href="lien-he.php" class="<?php echo basename($_SERVER['PHP_SELF']) == 'lien-he.php' ? 'active' : ''; ?>">Liên hệ</a></li>
                     <li><a href="cong-dong.php" class="<?php echo basename($_SERVER['PHP_SELF']) == 'cong-dong.php' ? 'active' : ''; ?>">Cộng đồng</a></li>
+                    <?php if(isset($_SESSION['user_id'])): ?>
+                        <li><a href="tin-nhan.php" class="<?php echo basename($_SERVER['PHP_SELF']) == 'tin-nhan.php' ? 'active' : ''; ?>">Tin nhắn</a></li>
+                    <?php endif; ?>
 
                     <?php if(isset($_SESSION['username'])): ?>
 
@@ -370,6 +379,7 @@
                                 <li><a href="#" onclick="changeDisplayName(); return false;"><i class="fas fa-edit"></i> Đổi họ và tên</a></li>
                                 
                                 <!-- <li style="display:none;"><a href="dang-bai.php"><i class="fas fa-plus-circle"></i> Đăng bài</a></li> -->
+                                <li><a href="tin-nhan.php"><i class="fas fa-comments"></i> Tin nhắn & Gọi điện</a></li>
                                 <li><a href="bai-dang-cua-toi.php"><i class="fas fa-list"></i> Bài đăng của tôi</a></li>
                                 <li><a href="logout.php"><i class="fas fa-sign-out-alt"></i> Đăng xuất</a></li>
                             </ul>
@@ -921,4 +931,16 @@
     })();
     </script>
     <?php endif; ?>
+
+<?php if (isset($_SESSION['user_id'])): ?>
+    <!-- Real-time communication dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.7.2/dist/socket.io.min.js"></script>
+    <script src="https://unpkg.com/@zegocloud/zego-uikit-prebuilt/zego-uikit-prebuilt.js"></script>
+    <!-- Hidden inputs for active user profile -->
+    <input type="hidden" id="current-user-id" value="<?php echo $_SESSION['user_id']; ?>">
+    <input type="hidden" id="current-user-name" value="<?php echo htmlspecialchars($_SESSION['hoten'] ?? $_SESSION['username'] ?? ''); ?>">
+    <!-- Custom realtime scripts -->
+    <script src="assets/js/chat-realtime.js?v=<?= time() ?>"></script>
+    <script src="assets/js/call-webrtc.js?v=<?= time() ?>"></script>
+<?php endif; ?>
 

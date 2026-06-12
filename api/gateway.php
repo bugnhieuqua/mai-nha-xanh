@@ -51,7 +51,7 @@ try {
         // --- NHÓM ADMIN (Sẽ mở rộng dần) ---
         case 'admin_get_notifs':
             requireLogin('admin');
-            require_once 'admin_get_notifications.php';
+            require_once 'admin-get-notifications.php';
             break;
 
         default:

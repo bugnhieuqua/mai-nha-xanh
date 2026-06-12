@@ -54,7 +54,11 @@ if (empty($apiKey)) {
     exit;
 }
 
-$model = $_ENV['GROQ_MODEL'] ?? getenv('GROQ_MODEL') ?? 'llama-3.3-70b-versatile';
+$groqModel = (!empty($_ENV['GROQ_MODEL']) ? $_ENV['GROQ_MODEL'] : (getenv('GROQ_MODEL') ?: 'llama-3.3-70b-versatile'));
+$openaiModel = (!empty($_ENV['OPENAI_MODEL']) ? $_ENV['OPENAI_MODEL'] : (getenv('OPENAI_MODEL') ?: 'gpt-4o-mini'));
+$geminiModel = (!empty($_ENV['GEMINI_MODEL']) ? $_ENV['GEMINI_MODEL'] : (getenv('GEMINI_MODEL') ?: 'gemini-2.5-flash'));
+
+$apiModel = $groqModel; // sẽ gán lại sau khi xác định dùng OpenAI hay Groq
 $appDebug = $_ENV['APP_DEBUG'] ?? getenv('APP_DEBUG') ?? 'false';
 
 // 2. Load System Prompt cốt lõi của chatbot
@@ -70,8 +74,9 @@ $systemPrompt = $systemPromptBase . "\n\n" .
     "CÚ PHÁP HIỂN THỊ PHÒNG TRỌ (CỰC KỲ QUAN TRỌNG):\n" .
     "Khi giới thiệu bất kỳ phòng trọ nào từ kết quả tìm kiếm (tool search_rooms_semantic), bạn BẮT BUỘC phải chèn thẻ dạng [ROOM:nguon:id] (Ví dụ: [ROOM:phongtro:44] hoặc [ROOM:dangbai:25]) vào ngay cuối mô tả hoặc vị trí thích hợp của phòng đó. Điều này giúp hệ thống render thành thẻ phòng trực quan đẹp mắt. KHÔNG tự chế ID phòng và không bỏ quên thẻ này.\n\n" .
     "HƯỚNG DẪN GỌI HÀM (TOOL CALLING):\n" .
-    "- CHỈ gọi hàm `search_rooms_semantic` khi người dùng thực sự muốn tìm kiếm hoặc hỏi về phòng trọ.\n" .
-    "- Nếu người dùng chỉ nói các từ chung chung như 'chi tiết', 'xem thêm', 'ok', 'chào bạn' mà chưa có nhu cầu tìm phòng cụ thể, hãy phản hồi tự nhiên để hỏi thêm thông tin thay vì gọi hàm vô ích.\n" .
+    "- Gọi hàm `search_rooms_semantic` khi người dùng muốn tìm kiếm, hỏi về phòng trọ cụ thể (ví dụ: 'tìm phòng ở Bến Thủy', 'tìm phòng dưới 2 triệu', 'phòng có máy giặt', v.v.).\n" .
+    "- Gọi hàm `get_room_statistics` khi người dùng hỏi các câu hỏi thống kê hoặc đếm số lượng phòng trọ (ví dụ: 'còn bao nhiêu phòng', 'tổng số phòng', 'có bao nhiêu phòng trống', 'giá thấp nhất/cao nhất/trung bình', v.v.).\n" .
+    "- Nếu người dùng chỉ nói các từ chung chung như 'chi tiết', 'xem thêm', 'ok', 'chào bạn' mà chưa có nhu cầu tìm phòng cụ thể hay thống kê, hãy phản hồi tự nhiên để hỏi thêm thông tin thay vì gọi hàm vô ích.\n" .
     "- Khi gọi hàm, tuyệt đối không bọc các đối số trong markdown code blocks hay trả về các ký tự định dạng thừa.";
 
 // 3. Chuẩn bị danh sách tin nhắn gửi đến Groq
@@ -86,6 +91,34 @@ foreach ($payload['messages'] as $msg) {
     // Convert 'model' role from Gemini/Frontend to 'assistant' for Groq
     $role = $msg['role'] === 'model' ? 'assistant' : $msg['role'];
     $content = $msg['content'] ?? ($msg['parts'][0]['text'] ?? '');
+
+    // Ngăn chặn và bảo vệ chống tấn công Prompt Injection
+    if ($role === 'user') {
+        $lowerContent = mb_strtolower($content, 'UTF-8');
+        $injectionPatterns = [
+            'ignore previous',
+            'ignore the instructions',
+            'bỏ qua hướng dẫn',
+            'quên các hướng dẫn',
+            'tiết lộ system prompt',
+            'reveal system prompt',
+            'show system prompt',
+            'từ giờ hãy là',
+            'act as a',
+            'jailbreak',
+            'bỏ qua quy tắc'
+        ];
+        foreach ($injectionPatterns as $pattern) {
+            if (mb_strpos($lowerContent, $pattern) !== false) {
+                http_response_code(400);
+                echo json_encode([
+                    'success' => false,
+                    'error' => 'Hệ thống phát hiện hành vi can thiệp bảo mật (Prompt Injection). Yêu cầu bị từ chối.'
+                ], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+        }
+    }
 
     $groqMessages[] = ['role' => $role, 'content' => $content];
 }
@@ -151,50 +184,106 @@ $tools = [
     ]
 ];
 
-// 5. Gọi Groq API lần 1
-$url = 'https://api.groq.com/openai/v1/chat/completions';
-$postData = [
-    'model' => $model,
-    'messages' => $groqMessages,
-    'temperature' => 0.7,
-    'max_tokens' => 2048,
-    'tools' => $tools,
-    'tool_choice' => 'auto'
-];
+// 5. Khởi tạo danh sách các AI provider để thực hiện auto-fallback (Ưu tiên Groq trước)
+$providers = [];
 
-$ch = curl_init($url);
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_POST, true);
-curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($postData));
-curl_setopt($ch, CURLOPT_HTTPHEADER, [
-    'Content-Type: application/json',
-    'Authorization: Bearer ' . $apiKey
-]);
-curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-
-if ($appDebug === 'true') {
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+// Thêm Groq vào danh sách nếu có Key
+$groqKey = $_ENV['GROQ_API_KEY'] ?? getenv('GROQ_API_KEY') ?? '';
+if (!empty($groqKey)) {
+    $providers[] = [
+        'name' => 'Groq',
+        'url' => 'https://api.groq.com/openai/v1/chat/completions',
+        'key' => $groqKey,
+        'model' => $groqModel
+    ];
 }
 
-$response = curl_exec($ch);
-$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-$curlError = curl_error($ch);
+// Thêm OpenAI vào danh sách nếu có Key
+$openaiKey = $_ENV['OPENAI_API_KEY'] ?? getenv('OPENAI_API_KEY') ?? '';
+if (!empty($openaiKey)) {
+    $providers[] = [
+        'name' => 'OpenAI',
+        'url' => 'https://api.openai.com/v1/chat/completions',
+        'key' => $openaiKey,
+        'model' => $openaiModel
+    ];
+}
 
-if ($curlError) {
-    http_response_code(502);
-    echo json_encode(['error' => 'Kết nối đến AI thất bại (Vòng 1): ' . $curlError]);
+// Thêm Gemini vào danh sách nếu có Key (OpenAI-compatible endpoint)
+$geminiKey = $_ENV['GEMINI_API_KEY'] ?? getenv('GEMINI_API_KEY') ?? '';
+if (!empty($geminiKey)) {
+    $providers[] = [
+        'name' => 'Gemini',
+        'url' => 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+        'key' => $geminiKey,
+        'model' => $geminiModel
+    ];
+}
+
+if (empty($providers)) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Chưa cấu hình API Key cho OpenAI, Groq hay Gemini.']);
     exit;
 }
 
-if ($httpCode !== 200) {
-    error_log("Groq API Error (Round 1): Status code: $httpCode. Response: " . $response);
-    // Tránh trả về HTML/text từ hosting/gateway khi frontend mong đợi JSON
+// Tự động phát hiện môi trường localhost
+$hostName = $_SERVER['HTTP_HOST'] ?? '';
+$isLocalhost = in_array($hostName, ['localhost', '127.0.0.1', '::1'])
+    || (isset($_SERVER['SERVER_ADDR']) && in_array($_SERVER['SERVER_ADDR'], ['127.0.0.1', '::1']))
+    || strpos($hostName, 'localhost:') === 0;
+
+$response = null;
+$httpCode = 0;
+$curlError = '';
+$activeProvider = null;
+
+// Thử lần lượt từng nhà cung cấp
+foreach ($providers as $provider) {
+    $postData = [
+        'model' => $provider['model'],
+        'messages' => $groqMessages,
+        'temperature' => 0.7,
+        'max_tokens' => 2048,
+        'tools' => $tools,
+        'tool_choice' => 'auto'
+    ];
+
+    $ch = curl_init($provider['url']);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($postData));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Content-Type: application/json',
+        'Authorization: Bearer ' . $provider['key']
+    ]);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+
+    // Bỏ qua SSL check trên localhost hoặc khi bật chế độ DEBUG
+    if ($isLocalhost || $appDebug === 'true') {
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+    }
+
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($ch);
+
+    if (!$curlError && $httpCode === 200) {
+        $activeProvider = $provider;
+        break; // Gọi thành công, thoát vòng lặp
+    } else {
+        error_log("AI Provider " . $provider['name'] . " failed (HTTP $httpCode, Curl: $curlError, Response: $response). Trying next...");
+    }
+}
+
+// Nếu không có nhà cung cấp nào thành công
+if ($activeProvider === null) {
+    error_log("All AI Providers failed. Last error: HTTP $httpCode, Curl: $curlError");
     http_response_code(503);
     echo json_encode([
         'success' => false,
         'maintenance' => true,
-        'message' => 'Hệ thống AI đang bảo trì. Vui lòng thử lại sau ít phút.'
+        'message' => 'Hệ thống AI đang bận hoặc bảo trì. Vui lòng thử lại sau.'
     ], JSON_UNESCAPED_UNICODE);
     exit;
 }
@@ -252,39 +341,73 @@ if ($choice && isset($choice['message']['tool_calls']) && !empty($choice['messag
         }
     }
 
-    // Gọi Groq API lần 2 để nhận câu trả lời cuối cùng
-    $postData2 = [
-        'model' => $model,
-        'messages' => $groqMessages,
-        'temperature' => 0.7,
-        'max_tokens' => 2048
-    ];
+    // Gọi API của Provider thành công lần 2 để nhận câu trả lời cuối cùng
+    $response = null;
+    $httpCode = 0;
+    $curlError = '';
+    $successProvider = null;
 
-    // Tận dụng cURL handle hiện tại
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($postData2));
+    // Sắp xếp lại providers để thử activeProvider trước (nếu có)
+    $round2Providers = $providers;
+    if ($activeProvider !== null) {
+        $round2Providers = array_filter($round2Providers, function($p) use ($activeProvider) {
+            return $p['name'] !== $activeProvider['name'];
+        });
+        array_unshift($round2Providers, $activeProvider);
+    }
 
-    $response = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $curlError = curl_error($ch);
+    foreach ($round2Providers as $provider) {
+        $postData2 = [
+            'model' => $provider['model'],
+            'messages' => $groqMessages,
+            'temperature' => 0.7,
+            'max_tokens' => 2048
+        ];
 
-    if ($curlError) {
-        http_response_code(502);
-        echo json_encode(['error' => 'Kết nối đến AI thất bại (Vòng 2): ' . $curlError]);
+        $ch2 = curl_init($provider['url']);
+        curl_setopt($ch2, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch2, CURLOPT_POST, true);
+        curl_setopt($ch2, CURLOPT_POSTFIELDS, json_encode($postData2));
+        curl_setopt($ch2, CURLOPT_HTTPHEADER, [
+            'Content-Type: application/json',
+            'Authorization: Bearer ' . $provider['key']
+        ]);
+        curl_setopt($ch2, CURLOPT_TIMEOUT, 30);
+
+        if ($isLocalhost || $appDebug === 'true') {
+            curl_setopt($ch2, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch2, CURLOPT_SSL_VERIFYHOST, false);
+        }
+
+        $response = curl_exec($ch2);
+        $httpCode = curl_getinfo($ch2, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch2);
+
+        if (!$curlError && $httpCode === 200) {
+            $successProvider = $provider;
+            break; // Gọi thành công, thoát vòng lặp
+        } else {
+            error_log("Round 2 API Error on provider " . $provider['name'] . ": HTTP $httpCode, Curl: $curlError, Response: $response. Trying next...");
+        }
+    }
+
+    if ($successProvider === null) {
+        error_log("Round 2: All AI Providers failed. Last error: HTTP $httpCode, Curl: $curlError");
+        http_response_code(503);
+        echo json_encode([
+            'success' => false,
+            'maintenance' => true,
+            'message' => 'Hệ thống AI gặp sự cố khi xử lý dữ liệu. Vui lòng thử lại sau.'
+        ], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
-    if ($httpCode === 200) {
-        $resArray = json_decode($response, true);
-        if ($resArray) {
-            $resArray['matched_rooms'] = $GLOBALS['chatbot_matched_rooms'] ?? [];
-            echo json_encode($resArray);
-            exit;
-        }
+    $resArray = json_decode($response, true);
+    if ($resArray) {
+        $resArray['matched_rooms'] = $GLOBALS['chatbot_matched_rooms'] ?? [];
+        echo json_encode($resArray);
+        exit;
     }
-    error_log("Groq API Error (Round 2): Status code: $httpCode. Response: " . $response);
-    http_response_code($httpCode);
-    echo $response;
-    exit;
 }
 
 // Nếu không gọi Tool, trả về phản hồi gốc luôn (Single-Turn phản hồi thẳng)
@@ -499,7 +622,17 @@ function parsePriceString(string $priceStr): float
  */
 function execute_room_statistics(string $action, ?string $filterStatus, int $limit, string $sortBy): string
 {
-    $url = 'http://' . $_SERVER['HTTP_HOST'] . '/api/v2/chatbot_room_stats.php';
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? '';
+    if ($host === '') {
+        return "Lỗi: Không xác định được HTTP_HOST để gọi room stats.";
+    }
+    
+    // Tự động xác định base directory để gọi đúng API kể cả khi ở thư mục con
+    $scriptDir = dirname($_SERVER['SCRIPT_NAME'] ?? '');
+    $scriptDir = str_replace('\\', '/', $scriptDir);
+    $scriptDir = rtrim($scriptDir, '/');
+    $url = $scheme . '://' . $host . $scriptDir . '/chatbot_room_stats.php';
 
     $payload = [
         'action' => $action,
@@ -515,10 +648,20 @@ function execute_room_statistics(string $action, ?string $filterStatus, int $lim
     curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
     curl_setopt($ch, CURLOPT_TIMEOUT, 10);
 
+    // Bỏ qua SSL check trên localhost hoặc khi bật chế độ DEBUG
+    $appDebug = $_ENV['APP_DEBUG'] ?? getenv('APP_DEBUG') ?? 'false';
+    $isLocalhost = in_array($host, ['localhost', '127.0.0.1', '::1'])
+        || (isset($_SERVER['SERVER_ADDR']) && in_array($_SERVER['SERVER_ADDR'], ['127.0.0.1', '::1']))
+        || strpos($host, 'localhost:') === 0;
+    if ($isLocalhost || $appDebug === 'true') {
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+    }
+
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $error = curl_error($ch);
-    curl_close($ch);
+    // Không gọi curl_close($ch); vì PHP 8.5+ deprecated.
 
     if ($error) {
         return "Lỗi: Không thể kết nối đến dịch vụ thống kê phòng (" . $error . ").";

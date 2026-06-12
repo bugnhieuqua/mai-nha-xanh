@@ -240,15 +240,18 @@ foreach ($rooms as $r) {
                         </label>
                         <label class="status-pill status-green" for="st-available">
                             <input type="radio" id="st-available" name="statusGroup" value="con_phong"
-                                onchange="setStatusFilter('con_phong')"> <span id="lbl-available">✅ Còn phòng (<?php echo $init_empty; ?>/<?php echo $init_total; ?>)</span>
+                                onchange="setStatusFilter('con_phong')"> <span id="lbl-available">✅ Còn phòng
+                                (<?php echo $init_empty; ?>/<?php echo $init_total; ?>)</span>
                         </label>
                         <label class="status-pill status-yellow" for="st-deposited">
                             <input type="radio" id="st-deposited" name="statusGroup" value="da_coc"
-                                onchange="setStatusFilter('da_coc')"> <span id="lbl-deposited">🟡 Đã đặt cọc (<?php echo $init_deposited; ?>/<?php echo $init_total; ?>)</span>
+                                onchange="setStatusFilter('da_coc')"> <span id="lbl-deposited">🟡 Đã đặt cọc
+                                (<?php echo $init_deposited; ?>/<?php echo $init_total; ?>)</span>
                         </label>
                         <label class="status-pill status-red" for="st-rented">
                             <input type="radio" id="st-rented" name="statusGroup" value="da_thue"
-                                onchange="setStatusFilter('da_thue')"> <span id="lbl-rented">🔴 Đã thuê (<?php echo $init_rented; ?>/<?php echo $init_total; ?>)</span>
+                                onchange="setStatusFilter('da_thue')"> <span id="lbl-rented">🔴 Đã thuê
+                                (<?php echo $init_rented; ?>/<?php echo $init_total; ?>)</span>
                         </label>
                     </div>
                     <select id="statusFilter" class="form-control" onchange="applyFilters()" style="display:none;">
@@ -378,169 +381,172 @@ foreach ($rooms as $r) {
                     <div id="custom-map-toggle" onclick="toggleMapStyle()" title="Chuyển sang Bản đồ vệ tinh">
                         <div id="toggle-thumbnail"
                             style="width: 100%; height: 100%; background: url('https://mt1.google.com/vt/lyrs=y&x=13001&y=7326&z=14') no-repeat center center; background-size: cover; display: flex; align-items: flex-end; justify-content: center;">
-                            <span id="toggle-label"
-                                style="background: rgba(0,0,0,0.65); color: #fff; width: 100%; font-size: 0.68rem; text-align: center; padding: 3px 0; font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase;">Vệ
-                                tinh</span>
+
+                        </div>
                     </div>
-                </div>
 
-                <?php
-                // Tính toán thông số thống kê ban đầu từ CSDL thông qua mảng $allRooms
-                $stat_empty = 0;
-                $stat_deposited = 0;
-                $stat_rented = 0;
-                $stat_total = count($allRooms);
+                    <?php
+                    // Tính toán thông số thống kê ban đầu từ CSDL thông qua mảng $allRooms
+                    $stat_empty = 0;
+                    $stat_deposited = 0;
+                    $stat_rented = 0;
+                    $stat_total = count($allRooms);
 
-                foreach ($allRooms as $r) {
-                    $st = $r['trangthai'] ?? 'con_phong';
-                    if ($st === 'da_thue') {
-                        $stat_rented++;
-                    } elseif ($st === 'da_coc') {
-                        $stat_deposited++;
-                    } else {
-                        $stat_empty++;
+                    foreach ($allRooms as $r) {
+                        $st = $r['trangthai'] ?? 'con_phong';
+                        if ($st === 'da_thue') {
+                            $stat_rented++;
+                        } elseif ($st === 'da_coc') {
+                            $stat_deposited++;
+                        } else {
+                            $stat_empty++;
+                        }
                     }
-                }
-                ?>
+                    ?>
 
-                <!-- Realtime Room Stats Dashboard -->
-                <div class="room-stats-dashboard animate-fade-up" style="margin-top:20px !important">
-                    <div class="stats-header">
-                        <span class="live-badge">
-                            <span class="ping-dot"></span>
-                            Realtime
-                        </span>
-                    </div>
-                    <div class="stats-grid">
-                        <div class="stat-card stat-empty">
-                            <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
-                            <div class="stat-info">
-                                <span class="stat-label">Phòng trống</span>
-                                <strong class="stat-value" id="stat-val-empty"><?php echo $stat_empty; ?></strong>
-                            </div>
+                    <!-- Realtime Room Stats Dashboard -->
+                    <div class="room-stats-dashboard animate-fade-up" style="margin-top:20px !important">
+                        <div class="stats-header">
+                            <span class="live-badge">
+                                <span class="ping-dot"></span>
+                                Realtime
+                            </span>
                         </div>
-                        <div class="stat-card stat-deposited">
-                            <div class="stat-icon"><i class="fas fa-wallet"></i></div>
-                            <div class="stat-info">
-                                <span class="stat-label">Đã cọc</span>
-                                <strong class="stat-value" id="stat-val-deposited"><?php echo $stat_deposited; ?></strong>
+                        <div class="stats-grid">
+                            <div class="stat-card stat-empty">
+                                <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+                                <div class="stat-info">
+                                    <span class="stat-label">Phòng trống</span>
+                                    <strong class="stat-value" id="stat-val-empty"><?php echo $stat_empty; ?></strong>
+                                </div>
                             </div>
-                        </div>
-                        <div class="stat-card stat-rented">
-                            <div class="stat-icon"><i class="fas fa-home"></i></div>
-                            <div class="stat-info">
-                                <span class="stat-label">Đã thuê</span>
-                                <strong class="stat-value" id="stat-val-rented"><?php echo $stat_rented; ?></strong>
+                            <div class="stat-card stat-deposited">
+                                <div class="stat-icon"><i class="fas fa-wallet"></i></div>
+                                <div class="stat-info">
+                                    <span class="stat-label">Đã cọc</span>
+                                    <strong class="stat-value"
+                                        id="stat-val-deposited"><?php echo $stat_deposited; ?></strong>
+                                </div>
                             </div>
-                        </div>
-                        <div class="stat-card stat-total">
-                            <div class="stat-icon"><i class="fas fa-border-all"></i></div>
-                            <div class="stat-info">
-                                <span class="stat-label">Tổng</span>
-                                <strong class="stat-value" id="stat-val-total"><?php echo $stat_total; ?></strong>
+                            <div class="stat-card stat-rented">
+                                <div class="stat-icon"><i class="fas fa-home"></i></div>
+                                <div class="stat-info">
+                                    <span class="stat-label">Đã thuê</span>
+                                    <strong class="stat-value" id="stat-val-rented"><?php echo $stat_rented; ?></strong>
+                                </div>
                             </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Rooms Grid (SEO: All rooms server-rendered, limited via JS based on device) -->
-                <div class="rooms-grid" id="roomsList">
-                    <?php foreach ($firstRooms as $room):
-                        $giaFormatted = number_format($room['gia']) . 'đ/tháng';
-                        $dientichFormatted = number_format($room['dientich']) . 'm²';
-
-                        $tiennghiArr = is_string($room['tiennghi'])
-                            ? array_values(array_filter(array_map('trim', explode(',', $room['tiennghi']))))
-                            : (is_array($room['tiennghi']) ? $room['tiennghi'] : []);
-
-                        $roomJson = htmlspecialchars(json_encode([
-                            'id' => $room['id'],
-                            'ten_phong' => $room['ten_phong'],
-                            'mota' => $room['mota'],
-                            'hinhanh' => $room['hinhanh'],
-                            'images' => $room['images'],
-                            'gia' => $giaFormatted,
-                            'dientich' => $dientichFormatted,
-                            'diachi' => $room['diachi'],
-                            'tiennghi' => $tiennghiArr,
-                            'ten_chunha' => $room['ten_chunha'],
-                            'sdt_chunha' => $room['sdt_chunha'],
-                            'nguoidang' => $room['nguoidang'],
-                            'video' => $room['video'],
-                            'nguon' => $room['nguon'],
-                            'trangthai' => $room['trangthai'],
-                            'lat' => $room['lat'],
-                            'lng' => $room['lng'],
-                        ]), ENT_QUOTES, 'UTF-8');
-
-                        $roomKey = '[ROOM:' . $room['nguon'] . ':' . $room['id'] . ']';
-                        $searchText = mb_strtolower(($room['ten_phong'] ?? '') . ' ' . ($room['diachi'] ?? ''), 'UTF-8');
-                        ?>
-                        <div class="room-card" style="animation-delay: <?php echo (rand(0, 40) / 10); ?>s;"
-                            onclick="openRoomDetails(this)" data-room-id="<?php echo intval($room['id']); ?>"
-                            data-nguon="<?php echo htmlspecialchars($room['nguon']); ?>"
-                            data-room-key="<?php echo htmlspecialchars($roomKey); ?>" data-room="<?php echo $roomJson; ?>"
-                            data-price="<?php echo $room['gia']; ?>" data-area="<?php echo $room['dientich']; ?>"
-                            data-status="<?php echo htmlspecialchars($room['trangthai']); ?>"
-                            data-location="<?php echo htmlspecialchars($room['locationKey']); ?>"
-                            data-lat="<?php echo htmlspecialchars($room['lat']); ?>"
-                            data-lng="<?php echo htmlspecialchars($room['lng']); ?>"
-                            data-search="<?php echo htmlspecialchars($searchText); ?>">
-                            <div class="room-image js-room-image"
-                                style="<?php echo ($room['trangthai'] == 'da_thue') ? 'filter: grayscale(1);' : ''; ?>">
-                                <?php if (!empty($room['hinhanh'])): ?>
-                                    <img src="<?php echo htmlspecialchars($room['hinhanh']); ?>"
-                                        alt="<?php echo htmlspecialchars($room['ten_phong']); ?>">
-                                <?php else: ?>
-                                    <img src="https://via.placeholder.com/400x300?text=Phong+Tro" alt="Phòng trọ">
-                                <?php endif; ?>
-                                <?php if ($room['trangthai'] == 'da_thue'): ?>
-                                    <div class="js-room-overlay"
-                                        style="position:absolute; inset:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:5;">
-                                        <span class="js-room-overlay-text"
-                                            style="border:2px solid #fff; color:#fff; padding:6px 15px; font-weight:800; border-radius:4px; transform:rotate(-15deg); font-size:1.2rem; letter-spacing:1px; text-shadow:0 2px 4px rgba(0,0,0,0.5);">ĐÃ
-                                            THUÊ</span>
-                                    </div>
-                                <?php elseif ($room['trangthai'] == 'da_coc'): ?>
-                                    <div class="js-room-overlay"
-                                        style="position:absolute; inset:0; background:rgba(245, 158, 11, 0.4); display:flex; align-items:center; justify-content:center; z-index:5;">
-                                        <span class="js-room-overlay-text"
-                                            style="border:2px solid #fff; color:#fff; padding:6px 15px; font-weight:800; border-radius:4px; transform:rotate(-15deg); font-size:1.2rem; letter-spacing:1px; text-shadow:0 2px 4px rgba(0,0,0,0.5);">ĐÃ
-                                            ĐẶT CỌC</span>
-                                    </div>
-                                <?php endif; ?>
-                                <?php
-                                $badgeClass = '';
-                                $badgeText = 'Còn phòng';
-                                if ($room['trangthai'] == 'da_thue') {
-                                    $badgeClass = 'badge-danger';
-                                    $badgeText = 'Đã thuê';
-                                } elseif ($room['trangthai'] == 'da_coc') {
-                                    $badgeClass = 'badge-warning';
-                                    $badgeText = 'Đã đặt cọc';
-                                }
-                                ?>
-                                <div class="room-badge js-room-badge <?= $badgeClass ?>" <?= ($room['trangthai'] == 'da_coc') ? 'style="background-color: #f59e0b;"' : '' ?>><?= $badgeText ?></div>
-                            </div>
-                            <div class="room-info">
-                                <h3><?php echo htmlspecialchars($room['ten_phong'] ?? ''); ?></h3>
-                                <p class="room-address">
-                                    <i class="fas fa-map-marker-alt" style="color:#ef4444;"></i>
-                                    <?php echo htmlspecialchars($room['diachi'] ?? ''); ?>
-                                </p>
-                                <div class="room-details">
-                                    <span><i class="fas fa-ruler-combined"></i>
-                                        <?php echo number_format($room['dientich'] ?? 0); ?>m²</span>
-                                    <span class="room-price"><?php echo number_format($room['gia'] ?? 0); ?>đ</span>
+                            <div class="stat-card stat-total">
+                                <div class="stat-icon"><i class="fas fa-border-all"></i></div>
+                                <div class="stat-info">
+                                    <span class="stat-label">Tổng</span>
+                                    <strong class="stat-value" id="stat-val-total"><?php echo $stat_total; ?></strong>
                                 </div>
                             </div>
                         </div>
+                    </div>
 
-                    <?php endforeach; ?>
+                    <!-- Rooms Grid (SEO: All rooms server-rendered, limited via JS based on device) -->
+                    <div class="rooms-grid" id="roomsList">
+                        <?php foreach ($firstRooms as $room):
+                            $giaFormatted = number_format($room['gia']) . 'đ/tháng';
+                            $dientichFormatted = number_format($room['dientich']) . 'm²';
+
+                            $tiennghiArr = is_string($room['tiennghi'])
+                                ? array_values(array_filter(array_map('trim', explode(',', $room['tiennghi']))))
+                                : (is_array($room['tiennghi']) ? $room['tiennghi'] : []);
+
+                            $roomJson = htmlspecialchars(json_encode([
+                                'id' => $room['id'],
+                                'ten_phong' => $room['ten_phong'],
+                                'mota' => $room['mota'],
+                                'hinhanh' => $room['hinhanh'],
+                                'images' => $room['images'],
+                                'gia' => $giaFormatted,
+                                'dientich' => $dientichFormatted,
+                                'diachi' => $room['diachi'],
+                                'tiennghi' => $tiennghiArr,
+                                'ten_chunha' => $room['ten_chunha'],
+                                'sdt_chunha' => $room['sdt_chunha'],
+                                'nguoidang' => $room['nguoidang'],
+                                'video' => $room['video'],
+                                'nguon' => $room['nguon'],
+                                'trangthai' => $room['trangthai'],
+                                'lat' => $room['lat'],
+                                'lng' => $room['lng'],
+                            ]), ENT_QUOTES, 'UTF-8');
+
+                            $roomKey = '[ROOM:' . $room['nguon'] . ':' . $room['id'] . ']';
+                            $searchText = mb_strtolower(($room['ten_phong'] ?? '') . ' ' . ($room['diachi'] ?? ''), 'UTF-8');
+                            ?>
+                            <div class="room-card" style="animation-delay: <?php echo (rand(0, 40) / 10); ?>s;"
+                                onclick="openRoomDetails(this)" data-room-id="<?php echo intval($room['id']); ?>"
+                                data-nguon="<?php echo htmlspecialchars($room['nguon']); ?>"
+                                data-room-key="<?php echo htmlspecialchars($roomKey); ?>"
+                                data-room="<?php echo $roomJson; ?>" data-price="<?php echo $room['gia']; ?>"
+                                data-area="<?php echo $room['dientich']; ?>"
+                                data-status="<?php echo htmlspecialchars($room['trangthai']); ?>"
+                                data-location="<?php echo htmlspecialchars($room['locationKey']); ?>"
+                                data-lat="<?php echo htmlspecialchars($room['lat']); ?>"
+                                data-lng="<?php echo htmlspecialchars($room['lng']); ?>"
+                                data-search="<?php echo htmlspecialchars($searchText); ?>">
+                                <div class="room-image js-room-image"
+                                    style="<?php echo ($room['trangthai'] == 'da_thue') ? 'filter: grayscale(1);' : ''; ?>">
+                                    <?php if (!empty($room['hinhanh'])): ?>
+                                        <img src="<?php echo htmlspecialchars($room['hinhanh']); ?>"
+                                            alt="<?php echo htmlspecialchars($room['ten_phong']); ?>">
+                                    <?php else: ?>
+                                        <img src="https://via.placeholder.com/400x300?text=Phong+Tro" alt="Phòng trọ">
+                                    <?php endif; ?>
+                                    <?php if ($room['trangthai'] == 'da_thue'): ?>
+                                        <div class="js-room-overlay"
+                                            style="position:absolute; inset:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:5;">
+                                            <span class="js-room-overlay-text"
+                                                style="border:2px solid #fff; color:#fff; padding:6px 15px; font-weight:800; border-radius:4px; transform:rotate(-15deg); font-size:1.2rem; letter-spacing:1px; text-shadow:0 2px 4px rgba(0,0,0,0.5);">ĐÃ
+                                                THUÊ</span>
+                                        </div>
+                                    <?php elseif ($room['trangthai'] == 'da_coc'): ?>
+                                        <div class="js-room-overlay"
+                                            style="position:absolute; inset:0; background:rgba(245, 158, 11, 0.4); display:flex; align-items:center; justify-content:center; z-index:5;">
+                                            <span class="js-room-overlay-text"
+                                                style="border:2px solid #fff; color:#fff; padding:6px 15px; font-weight:800; border-radius:4px; transform:rotate(-15deg); font-size:1.2rem; letter-spacing:1px; text-shadow:0 2px 4px rgba(0,0,0,0.5);">ĐÃ
+                                                ĐẶT CỌC</span>
+                                        </div>
+                                    <?php endif; ?>
+                                    <?php
+                                    $badgeClass = '';
+                                    $badgeText = 'Còn phòng';
+                                    if ($room['trangthai'] == 'da_thue') {
+                                        $badgeClass = 'badge-danger';
+                                        $badgeText = 'Đã thuê';
+                                    } elseif ($room['trangthai'] == 'da_coc') {
+                                        $badgeClass = 'badge-warning';
+                                        $badgeText = 'Đã đặt cọc';
+                                    }
+                                    ?>
+                                    <div class="room-badge js-room-badge <?= $badgeClass ?>"
+                                        <?= ($room['trangthai'] == 'da_coc') ? 'style="background-color: #f59e0b;"' : '' ?>>
+                                        <?= $badgeText ?>
+                                    </div>
+                                </div>
+                                <div class="room-info">
+                                    <h3><?php echo htmlspecialchars($room['ten_phong'] ?? ''); ?></h3>
+                                    <p class="room-address">
+                                        <i class="fas fa-map-marker-alt" style="color:#ef4444;"></i>
+                                        <?php echo htmlspecialchars($room['diachi'] ?? ''); ?>
+                                    </p>
+                                    <div class="room-details">
+                                        <span><i class="fas fa-ruler-combined"></i>
+                                            <?php echo number_format($room['dientich'] ?? 0); ?>m²</span>
+                                        <span class="room-price"><?php echo number_format($room['gia'] ?? 0); ?>đ</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                        <?php endforeach; ?>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 </section>
 
 <!-- Media Lightbox -->
@@ -666,7 +672,7 @@ foreach ($rooms as $r) {
         -webkit-text-fill-color: transparent;
         display: flex;
         align-items: center;
-        color:black !important;                            
+        color: black !important;
     }
 
     .live-badge {
@@ -706,8 +712,15 @@ foreach ($rooms as $r) {
     }
 
     @keyframes ping {
-        0% { transform: scale(1); opacity: 1; }
-        100% { transform: scale(3.5); opacity: 0; }
+        0% {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        100% {
+            transform: scale(3.5);
+            opacity: 0;
+        }
     }
 
     .stats-grid {
@@ -768,6 +781,7 @@ foreach ($rooms as $r) {
         color: #34d399;
         border: 1px solid rgba(16, 185, 129, 0.2);
     }
+
     .stat-empty:hover {
         border-color: rgba(16, 185, 129, 0.3);
     }
@@ -777,6 +791,7 @@ foreach ($rooms as $r) {
         color: #f59e0b;
         border: 1px solid rgba(245, 158, 11, 0.2);
     }
+
     .stat-deposited:hover {
         border-color: rgba(245, 158, 11, 0.3);
     }
@@ -786,6 +801,7 @@ foreach ($rooms as $r) {
         color: #f43f5e;
         border: 1px solid rgba(239, 68, 68, 0.2);
     }
+
     .stat-rented:hover {
         border-color: rgba(239, 68, 68, 0.3);
     }
@@ -795,6 +811,7 @@ foreach ($rooms as $r) {
         color: #818cf8;
         border: 1px solid rgba(99, 102, 241, 0.2);
     }
+
     .stat-total:hover {
         border-color: rgba(99, 102, 241, 0.3);
     }
@@ -1372,6 +1389,9 @@ $username = $_SESSION['username'] ?? '';
             const data = await res.json();
             if (data.success) {
                 const newStatus = data.room_status || 'da_coc';
+                if (typeof window.__applyRoomStatusStatsSync === 'function') {
+                    window.__applyRoomStatusStatsSync(payload.post_id, payload.nguon, newStatus);
+                }
                 updateRoomStatusInList(payload.post_id, payload.nguon, newStatus);
                 if (_currentBookingData && String(_currentBookingData.id) === String(payload.post_id) && _currentBookingData.nguon === payload.nguon) {
                     _currentBookingData.trangthai = newStatus;
@@ -1777,8 +1797,120 @@ $username = $_SESSION['username'] ?? '';
                     }, 500);
                 }
             }
-            // Realtime Room Stats Polling
-            async function updateRealtimeStats() {
+            function updateRoomStatsUI({ emptyVal, depositedVal, rentedVal, totalVal }) {
+                const emptyEl = document.getElementById('stat-val-empty');
+                const depositedEl = document.getElementById('stat-val-deposited');
+                const rentedEl = document.getElementById('stat-val-rented');
+                const totalEl = document.getElementById('stat-val-total');
+
+                if (emptyEl) emptyEl.textContent = emptyVal;
+                if (depositedEl) depositedEl.textContent = depositedVal;
+                if (rentedEl) rentedEl.textContent = rentedVal;
+                if (totalEl) totalEl.textContent = totalVal;
+
+                const lblAll = document.getElementById('lbl-all');
+                const lblAvailable = document.getElementById('lbl-available');
+                const lblDeposited = document.getElementById('lbl-deposited');
+                const lblRented = document.getElementById('lbl-rented');
+
+                if (lblAll) lblAll.textContent = `Tất cả (${totalVal})`;
+                if (lblAvailable) lblAvailable.textContent = `✅ Còn phòng (${emptyVal}/${totalVal})`;
+                if (lblDeposited) lblDeposited.textContent = `🟡 Đã đặt cọc (${depositedVal}/${totalVal})`;
+                if (lblRented) lblRented.textContent = `🔴 Đã thuê (${rentedVal}/${totalVal})`;
+            }
+
+            // Local realtime counters (không cần reload/poll liên tục)
+            const roomStats = {
+                empty: <?php echo (int) $stat_empty; ?>,
+                deposited: <?php echo (int) $stat_deposited; ?>,
+                rented: <?php echo (int) $stat_rented; ?>,
+            };
+
+            function normalizeStatusForStats(st) {
+                if (!st) return 'con_phong';
+                const s = String(st);
+                if (s === 'da_thue') return 'da_thue';
+                if (s === 'da_coc') return 'da_coc';
+                return 'con_phong';
+            }
+
+            function recomputeAndRenderStats() {
+                roomStats.empty = Math.max(0, roomStats.empty | 0);
+                roomStats.deposited = Math.max(0, roomStats.deposited | 0);
+                roomStats.rented = Math.max(0, roomStats.rented | 0);
+
+                const totalVal = roomStats.empty + roomStats.deposited + roomStats.rented;
+                updateRoomStatsUI({
+                    emptyVal: roomStats.empty,
+                    depositedVal: roomStats.deposited,
+                    rentedVal: roomStats.rented,
+                    totalVal
+                });
+            }
+
+            // Thay đổi theo delta khi có trạng thái phòng đổi
+            function applyStatusDelta(oldStatus, newStatus) {
+                const oldS = normalizeStatusForStats(oldStatus);
+                const newS = normalizeStatusForStats(newStatus);
+                if (oldS === newS) return;
+
+                // map status -> bucket
+                const decBucket = oldS === 'da_thue' ? 'rented' : (oldS === 'da_coc' ? 'deposited' : 'empty');
+                const incBucket = newS === 'da_thue' ? 'rented' : (newS === 'da_coc' ? 'deposited' : 'empty');
+
+                roomStats[decBucket] = Math.max(0, (roomStats[decBucket] | 0) - 1);
+                roomStats[incBucket] = (roomStats[incBucket] | 0) + 1;
+                recomputeAndRenderStats();
+            }
+
+            // Hook: cập nhật ngay khi action đặt phòng trả kết quả
+            window.__applyRoomStatusStatsSync = function (roomId, nguon, newStatus) {
+                try {
+                    const card = document.querySelector(`.room-card[data-room-id="${String(roomId)}"][data-nguon="${nguon}"]`);
+                    if (!card) return;
+
+                    const oldStatus = card.getAttribute('data-status') || card.getAttribute('data-room-status') || 'con_phong';
+                    const normalizedOld = normalizeRoomStatus(oldStatus);
+                    const normalizedNew = normalizeRoomStatus(newStatus);
+
+                    applyStatusDelta(normalizedOld, normalizedNew);
+                } catch (e) { }
+            };
+
+            // Storage realtime between tabs + dashboard sync
+            window.addEventListener('storage', function (event) {
+                if (event.key !== ROOM_STATUS_SYNC_KEY || !event.newValue) return;
+                try {
+                    const payload = JSON.parse(event.newValue);
+                    if (!payload || !payload.post_id || !payload.nguon || !payload.status) return;
+                    // apply delta based on DOM change order: apply delta before/after is fragile,
+                    // so we recompute from visible DOM trạng thái hiện tại của card
+                    const card = document.querySelector(`.room-card[data-room-id="${String(payload.post_id)}"][data-nguon="${payload.nguon}"]`);
+                    if (!card) return;
+                    // Read new status from payload, read old status from current card before UI update is already applied.
+                    // To make it deterministic, we do a lightweight full recompute from DOM counts each time.
+                    // (Cùng trang, số card hiển thị khá ít => rất nhanh.)
+                    let emptyVal = 0, depositedVal = 0, rentedVal = 0;
+                    const allCards = document.querySelectorAll('.room-card');
+                    allCards.forEach(c => {
+                        const st = c.getAttribute('data-status') || '';
+                        const ns = normalizeRoomStatus(st);
+                        if (ns === 'da_thue') rentedVal++;
+                        else if (ns === 'da_coc') depositedVal++;
+                        else emptyVal++;
+                    });
+                    roomStats.empty = emptyVal;
+                    roomStats.deposited = depositedVal;
+                    roomStats.rented = rentedVal;
+                    recomputeAndRenderStats();
+                } catch (e) { }
+            });
+
+            // Initial render stats (from PHP-rendered values)
+            recomputeAndRenderStats();
+
+            // Optional fallback: update every 60s (không gây lag/không “load lại” cảm giác)
+            setInterval(async function () {
                 try {
                     const res = await fetch('api/v2/chatbot_room_stats.php', {
                         method: 'POST',
@@ -1786,39 +1918,13 @@ $username = $_SESSION['username'] ?? '';
                         body: JSON.stringify({ action: 'count_by_status' })
                     });
                     const data = await res.json();
-                    if (data.success) {
-                        const emptyVal = parseInt(data.con_phong) || 0;
-                        const depositedVal = parseInt(data.da_coc) || 0;
-                        const rentedVal = parseInt(data.da_thue) || 0;
-                        const totalVal = emptyVal + depositedVal + rentedVal;
-
-                        const emptyEl = document.getElementById('stat-val-empty');
-                        const depositedEl = document.getElementById('stat-val-deposited');
-                        const rentedEl = document.getElementById('stat-val-rented');
-                        const totalEl = document.getElementById('stat-val-total');
-
-                        if (emptyEl) emptyEl.textContent = emptyVal;
-                        if (depositedEl) depositedEl.textContent = depositedVal;
-                        if (rentedEl) rentedEl.textContent = rentedVal;
-                        if (totalEl) totalEl.textContent = totalVal;
-
-                        const lblAll = document.getElementById('lbl-all');
-                        const lblAvailable = document.getElementById('lbl-available');
-                        const lblDeposited = document.getElementById('lbl-deposited');
-                        const lblRented = document.getElementById('lbl-rented');
-
-                        if (lblAll) lblAll.textContent = `Tất cả (${totalVal})`;
-                        if (lblAvailable) lblAvailable.textContent = `✅ Còn phòng (${emptyVal}/${totalVal})`;
-                        if (lblDeposited) lblDeposited.textContent = `🟡 Đã đặt cọc (${depositedVal}/${totalVal})`;
-                        if (lblRented) lblRented.textContent = `🔴 Đã thuê (${rentedVal}/${totalVal})`;
-                    }
-                } catch (err) {
-                    console.error("Failed to update realtime stats: ", err);
-                }
-            }
-
-            // Poll stats every 5 seconds
-            setInterval(updateRealtimeStats, 5000);
+                    if (!data.success) return;
+                    roomStats.empty = parseInt(data.con_phong) || 0;
+                    roomStats.deposited = parseInt(data.da_coc) || 0;
+                    roomStats.rented = parseInt(data.da_thue) || 0;
+                    recomputeAndRenderStats();
+                } catch (e) { }
+            }, 60000);
         } catch (e) {
             console.error("Leaflet initialization failed: ", e);
         }

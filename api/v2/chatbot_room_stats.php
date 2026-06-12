@@ -39,15 +39,7 @@ if (!$db) {
     exit;
 }
 
-function getDB()
-{
-    try {
-        $database = new Database();
-        return $database->getConnection();
-    } catch (Exception $e) {
-        return null;
-    }
-}
+
 
 $action = $payload['action'];
 
@@ -69,7 +61,7 @@ if ($action === 'count_total') {
             'total' => $total,
             'from_phongtro' => $cnt1,
             'from_dangbai' => $cnt2,
-            'message' => "Hiện tại hệ thống có *$total phòng trọ* (Bảng phongtro: $cnt1 phòng, Đăng bài: $cnt2 phòng)."
+            'message' => "Hiện tại hệ thống có $total phòng trọ (Bảng phongtro: $cnt1 phòng, Đăng bài: $cnt2 phòng)."
         ]);
     } catch (Exception $e) {
         http_response_code(500);
@@ -84,7 +76,7 @@ if ($action === 'count_by_status') {
     try {
         // Đếm từ phongtro
         $stmt1 = $db->query("
-            SELECT COALESCE(trangthai_phong, 'con_phong') as status, COUNT(*) as cnt
+            SELECT COALESCE(trangthai, 'con_phong') as status, COUNT(*) as cnt
             FROM phongtro
             GROUP BY status
         ");
@@ -108,11 +100,11 @@ if ($action === 'count_by_status') {
         // Format thông báo
         $parts = [];
         if ($merged['con_phong'] > 0)
-            $parts[] = "*{$merged['con_phong']} phòng còn trống*";
+            $parts[] = "- {$merged['con_phong']} phòng còn trống";
         if ($merged['da_coc'] > 0)
-            $parts[] = "*{$merged['da_coc']} phòng đã đặt cọc*";
+            $parts[] = "- {$merged['da_coc']} phòng đã đặt cọc";
         if ($merged['da_thue'] > 0)
-            $parts[] = "*{$merged['da_thue']} phòng đã thuê*";
+            $parts[] = "- {$merged['da_thue']} phòng đã thuê";
 
         $message = "Trạng thái phòng trọ:\n" . implode("\n", $parts);
 
@@ -155,7 +147,7 @@ if ($action === 'min_price') {
                 'success' => true,
                 'action' => 'min_price',
                 'min_price' => $min,
-                'message' => "Giá phòng *rẻ nhất* trong hệ thống là *{$minFormatted}đ/tháng*. Hãy để tôi tìm những phòng với mức giá này cho bạn."
+                'message' => "Giá phòng rẻ nhất trong hệ thống là {$minFormatted}đ/tháng. Hãy để tôi tìm những phòng với mức giá này cho bạn."
             ]);
         }
     } catch (Exception $e) {
@@ -189,7 +181,7 @@ if ($action === 'max_price') {
                 'success' => true,
                 'action' => 'max_price',
                 'max_price' => $max,
-                'message' => "Giá phòng *cao nhất* trong hệ thống là *{$maxFormatted}đ/tháng*."
+                'message' => "Giá phòng cao nhất trong hệ thống là {$maxFormatted}đ/tháng."
             ]);
         }
     } catch (Exception $e) {
@@ -220,7 +212,7 @@ if ($action === 'avg_price') {
                 'success' => true,
                 'action' => 'avg_price',
                 'avg_price' => round($avg),
-                'message' => "Giá phòng *trung bình* trong hệ thống là *{$avgFormatted}đ/tháng*."
+                'message' => "Giá phòng trung bình trong hệ thống là {$avgFormatted}đ/tháng."
             ]);
         } else {
             echo json_encode([
@@ -255,7 +247,7 @@ if ($action === 'count_by_ward') {
 
         $message = "Phòng trọ theo phường (top 5):\n";
         foreach ($wards as $w) {
-            $message .= "- *" . trim($w['ward']) . "*: {$w['cnt']} phòng\n";
+            $message .= "- " . trim($w['ward']) . ": {$w['cnt']} phòng\n";
         }
 
         echo json_encode([
@@ -283,7 +275,7 @@ if ($action === 'get_room_list') {
         // Xây dựng WHERE clause
         $whereClause = "WHERE 1=1";
         if ($filter_status) {
-            $whereClause .= " AND COALESCE(trangthai_phong, 'con_phong') = '" . $db->quote($filter_status)[1] . "'";
+            $whereClause .= " AND COALESCE(trangthai, 'con_phong') = " . $db->quote($filter_status);
         }
 
         // Xây dựng ORDER BY
@@ -295,7 +287,7 @@ if ($action === 'get_room_list') {
 
         // Query từ phongtro
         $sql = "
-            SELECT id, ten_phong, gia, dientich, diachi, trangthai_phong as trangthai, 'phongtro' as nguon, ngaydang
+            SELECT id, ten_phong, gia, dientich, diachi, trangthai as trangthai, 'phongtro' as nguon, ngaydang
             FROM phongtro
             $whereClause
             $orderBy

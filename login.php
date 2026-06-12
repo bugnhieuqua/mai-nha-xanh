@@ -651,7 +651,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     <i class="fas fa-eye password-toggle" id="togglePassword"></i>
                 </div>
                 <div style="text-align: right; margin-bottom: 20px;">
-                    <a href="forgot_password.php"
+                    <a href="auth-password-forgot.php"
                         style="color: #fff; font-size: 0.9rem; text-decoration: none; opacity: 0.9;">Quên mật khẩu?</a>
                 </div>
                 <button type="submit" class="btn-submit">Đăng Nhập</button>

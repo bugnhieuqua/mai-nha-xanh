@@ -242,7 +242,7 @@ $sidebar_initial = strtoupper(function_exists('mb_substr')
     async function globalAdminPoll() {
         try {
             // Bypass service worker / cache to ensure fresh notifications
-            const res = await fetch('../api/admin_get_notifications.php?_=' + Date.now(), { cache: 'no-store' });
+            const res = await fetch('../api/admin-get-notifications.php?_=' + Date.now(), { cache: 'no-store' });
             const data = await res.json();
             if (data.success) {
                 const badgePosts = document.getElementById('nav-badge-posts');

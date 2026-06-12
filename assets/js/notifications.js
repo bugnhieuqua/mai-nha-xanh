@@ -7,8 +7,8 @@
  */
 const NotifSystem = (() => {
   let cfg = {
-    apiUrl: "api/get_notifications.php",
-    adminApiUrl: "api/admin_get_notifications.php",
+    apiUrl: "api/get-notifications.php",
+    adminApiUrl: "api/admin-get-notifications.php",
     role: "user", // 'user' | 'admin'
     pollInterval: 4000, // ms — poll mỗi 4 giây
     badgeEl: null, // element hiển thị số

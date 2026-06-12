@@ -94,8 +94,10 @@ $_chat_username  = htmlspecialchars($_SESSION['username'] ?? '');
             <img class="chatbot-logo" src="assets/images/assistant.png" alt="Chatbot Logo" width="50" height="50">
             <h2 class="logo-text">Trợ lý AI</h2>
         </div>
-        <button id="close-chatbot" class="material-symbols-rounded">keyboard_arrow_down</button>
-
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <button id="clear-chatbot" class="material-symbols-outlined" title="Làm mới chat" style="background: none; border: none; color: #fff; cursor: pointer; font-size: 1.35rem; display: flex; align-items: center; justify-content: center; padding: 4px; transition: opacity 0.2s;" onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">delete</button>
+            <button id="close-chatbot" class="material-symbols-rounded" style="background: none; border: none; color: #fff; cursor: pointer; font-size: 1.5rem; display: flex; align-items: center; justify-content: center; padding: 4px; transition: opacity 0.2s;" onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">keyboard_arrow_down</button>
+        </div>
     </div>
     
     <!-- Chatbot Body -->

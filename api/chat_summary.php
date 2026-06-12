@@ -101,6 +101,19 @@ try {
     ]);
     curl_setopt($ch, CURLOPT_TIMEOUT, 30);
     
+    // Bỏ qua SSL check trên localhost hoặc khi bật chế độ DEBUG
+    $hostName = $_SERVER['HTTP_HOST'] ?? '';
+    $isLocalhost = (php_sapi_name() === 'cli')
+        || in_array($hostName, ['localhost', '127.0.0.1', '::1'])
+        || (isset($_SERVER['SERVER_ADDR']) && in_array($_SERVER['SERVER_ADDR'], ['127.0.0.1', '::1']))
+        || strpos($hostName, 'localhost:') === 0;
+
+    $appDebug = $_ENV['APP_DEBUG'] ?? getenv('APP_DEBUG') ?? 'false';
+    if ($isLocalhost || $appDebug === 'true') {
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+    }
+    
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 

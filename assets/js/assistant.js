@@ -329,7 +329,7 @@ if (!chatBody || !messageInput || !sendMessageButton || !chatbotToggler) {
      .replace(/\n/g, '<br>');
   };
 
-  const savedHistory = localStorage.getItem("chatbot_history");
+  const savedHistory = sessionStorage.getItem("chatbot_history");
   const chatHistory = savedHistory ? JSON.parse(savedHistory) : [];
   const initialInputHeight = messageInput.scrollHeight;
 
@@ -354,7 +354,7 @@ if (!chatBody || !messageInput || !sendMessageButton || !chatbotToggler) {
   // Lưu lịch sử chatbot vào DB
   const saveChatHistory = async (userMsg, botMsg) => {
     try {
-      await fetch("api/luu_tin_nhan.php", {
+      await fetch("api/api-message-save.php", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -532,12 +532,12 @@ if (!chatBody || !messageInput || !sendMessageButton || !chatbotToggler) {
       }
 
       if (!response.ok) {
-        throw new Error(data.error?.message || data.error || "Lỗi kết nối (HTTP " + response.status + ")");
+        throw new Error(data.error?.message || data.error || data.message || "Lỗi kết nối (HTTP " + response.status + ")");
       }
 
       // Xử lý kết quả trả về từ Groq (Chuẩn OpenAI format: choices[0].message.content)
       const apiResponseText = (data.choices[0].message.content || "")
-        .replace(/\*\*(.*?)\*\*/g, "$1") // Loại bỏ in đậm kép
+        .replace(/\*/g, "") // Loại bỏ hoàn toàn mọi dấu sao * gây lỗi hiển thị
         .trim();
       messageElement.innerHTML = linkifyResponse(apiResponseText);
 
@@ -684,6 +684,24 @@ if (!chatBody || !messageInput || !sendMessageButton || !chatbotToggler) {
     document.body.classList.remove("show-chatbot"),
   );
 
+  const clearChatbot = document.querySelector("#clear-chatbot");
+  if (clearChatbot) {
+    clearChatbot.addEventListener("click", () => {
+      if (confirm("Bạn có muốn xóa toàn bộ lịch sử trò chuyện này không?")) {
+        sessionStorage.removeItem("chatbot_history");
+        chatHistory.length = 0; // Clear history array in place
+        // Remove DOM messages except the first welcoming message
+        const messages = chatBody.querySelectorAll(".message");
+        messages.forEach((msg, idx) => {
+          if (idx > 0) msg.remove();
+        });
+        const quickReplies = document.getElementById("quick-replies");
+        if (quickReplies) quickReplies.style.display = "flex";
+        if (window.speechSynthesis) window.speechSynthesis.cancel();
+      }
+    });
+  }
+
   // File Input Handling
   fileInput.addEventListener("change", (e) => {
     const file = e.target.files[0];
@@ -751,7 +769,7 @@ if (!chatBody || !messageInput || !sendMessageButton || !chatbotToggler) {
     
     // Gửi request đánh dấu đã đọc trên server
     if (chatSessionId) {
-       fetch(`api/get_messages.php?session_id=${encodeURIComponent(chatSessionId)}&mark_read=1&_t=${Date.now()}`, { cache: 'no-store' }).catch(()=>{});
+       fetch(`api/get-messages.php?session_id=${encodeURIComponent(chatSessionId)}&mark_read=1&_t=${Date.now()}`, { cache: 'no-store' }).catch(()=>{});
     }
   };
 
@@ -884,7 +902,7 @@ if (!chatBody || !messageInput || !sendMessageButton || !chatbotToggler) {
   const loadAdminHistory = async () => {
     if (!chatSessionId) return;
     try {
-      let url = `api/get_messages.php?session_id=${encodeURIComponent(chatSessionId)}&_t=${Date.now()}`;
+      let url = `api/get-messages.php?session_id=${encodeURIComponent(chatSessionId)}&_t=${Date.now()}`;
       if (adminChatOpen) url += '&mark_read=1';
       const res  = await fetch(url, { cache: 'no-store' });
       const data = await res.json();
@@ -915,7 +933,7 @@ if (!chatBody || !messageInput || !sendMessageButton || !chatbotToggler) {
   const pollAdminReplies = async () => {
     if (!chatSessionId) return;
     try {
-      let url = `api/get_messages.php?session_id=${encodeURIComponent(chatSessionId)}&_t=${Date.now()}`;
+      let url = `api/get-messages.php?session_id=${encodeURIComponent(chatSessionId)}&_t=${Date.now()}`;
       if (adminPollLastTime) url += `&since=${encodeURIComponent(adminPollLastTime)}`;
       if (adminChatOpen) url += '&mark_read=1';
 
@@ -1013,7 +1031,7 @@ if (!chatBody || !messageInput || !sendMessageButton || !chatbotToggler) {
   const restoreAdminBadge = async () => {
     if (!chatSessionId || !adminBadge) return;
     try {
-      const res = await fetch(`api/get_messages.php?session_id=${encodeURIComponent(chatSessionId)}&_t=${Date.now()}`, { cache: 'no-store' });
+      const res = await fetch(`api/get-messages.php?session_id=${encodeURIComponent(chatSessionId)}&_t=${Date.now()}`, { cache: 'no-store' });
       const data = await res.json();
       if (!data.success || !data.data.length) return;
 

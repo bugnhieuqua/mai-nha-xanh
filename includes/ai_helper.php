@@ -39,9 +39,14 @@ function getEmbedding(string $text): ?array {
     ]);
     curl_setopt($ch, CURLOPT_TIMEOUT, 15);
     
-    // Bypass SSL on localhost
+    // Bypass SSL on localhost/CLI or debug mode
+    $isLocalhost = (php_sapi_name() === 'cli')
+        || in_array($_SERVER['HTTP_HOST'] ?? '', ['localhost', '127.0.0.1', '::1'])
+        || (isset($_SERVER['SERVER_ADDR']) && in_array($_SERVER['SERVER_ADDR'], ['127.0.0.1', '::1']))
+        || strpos($_SERVER['HTTP_HOST'] ?? '', 'localhost:') === 0;
+        
     $appDebug = $_ENV['APP_DEBUG'] ?? getenv('APP_DEBUG') ?? 'false';
-    if ($appDebug === 'true') {
+    if ($isLocalhost || $appDebug === 'true') {
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
     }

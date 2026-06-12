@@ -1,5 +1,5 @@
 (function () {
-  const apiUrl = '../api/admin_get_notifications.php';
+  const apiUrl = '../api/admin-get-notifications.php';
   const state = {
     items: [],
     unread: 0,
