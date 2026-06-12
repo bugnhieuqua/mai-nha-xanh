@@ -2,10 +2,11 @@
  * chat-realtime.js - Real-time chat & status synchronization client-side
  */
 
-// Xác định địa chỉ Socket.io server dựa trên hostname hiện tại
-const socketHost = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-    ? 'http://localhost:3000'
-    : window.location.protocol + '//' + window.location.hostname + ':3000';
+// Xác định địa chỉ Socket.io server dựa trên cấu hình PHP hoặc hostname hiện tại
+const socketHost = window.REALTIME_SERVER_URL || 
+    ((window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+        ? 'http://localhost:3000'
+        : window.location.protocol + '//' + window.location.hostname + ':3000');
 
 console.log(`[Realtime Client] Đang kết nối tới Socket Server tại: ${socketHost}`);
 const socket = io(socketHost);

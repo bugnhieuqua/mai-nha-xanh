@@ -939,6 +939,10 @@
     <!-- Hidden inputs for active user profile -->
     <input type="hidden" id="current-user-id" value="<?php echo $_SESSION['user_id']; ?>">
     <input type="hidden" id="current-user-name" value="<?php echo htmlspecialchars($_SESSION['hoten'] ?? $_SESSION['username'] ?? ''); ?>">
+    <script>
+        // Cấu hình URL của Socket.io Server từ file .env
+        window.REALTIME_SERVER_URL = "<?= $_ENV['REALTIME_SERVER_URL'] ?? getenv('REALTIME_SERVER_URL') ?? '' ?>";
+    </script>
     <!-- Custom realtime scripts -->
     <script src="assets/js/chat-realtime.js?v=<?= time() ?>"></script>
     <script src="assets/js/call-webrtc.js?v=<?= time() ?>"></script>

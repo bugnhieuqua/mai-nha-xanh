@@ -28,3 +28,7 @@ File/
 Update/
 *.md
 test_debug.php
+
+# Node.js dependencies
+node_modules/
+backend_realtime/node_modules/

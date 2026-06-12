@@ -14,27 +14,30 @@ const path = require('path');
 const PORT = process.env.PORT || 3000;
 const onlineUsers = new Map(); // Map: userId (string) => socketId (string)
 
-// Đọc file .env từ thư mục gốc để cấu hình PHP_API_BASE
-let PHP_API_BASE = 'http://localhost/mai-nha-xanh';
-try {
-    const envPath = path.join(__dirname, '..', '.env');
-    if (fs.existsSync(envPath)) {
-        const envContent = fs.readFileSync(envPath, 'utf8');
-        const lines = envContent.split('\n');
-        for (const line of lines) {
-            const trimmed = line.trim();
-            if (trimmed && !trimmed.startsWith('#') && trimmed.includes('=')) {
-                const parts = trimmed.split('=');
-                const key = parts[0].trim();
-                const value = parts.slice(1).join('=').trim().replace(/^['"]|['"]$/g, '');
-                if (key === 'PHP_API_BASE' || key === 'APP_URL') {
-                    PHP_API_BASE = value;
+// Cấu hình PHP_API_BASE (Ưu tiên biến môi trường process.env trên Render trước, sau đó mới đến file .env)
+let PHP_API_BASE = process.env.PHP_API_BASE || process.env.APP_URL || '';
+if (!PHP_API_BASE) {
+    PHP_API_BASE = 'http://localhost/mai-nha-xanh';
+    try {
+        const envPath = path.join(__dirname, '..', '.env');
+        if (fs.existsSync(envPath)) {
+            const envContent = fs.readFileSync(envPath, 'utf8');
+            const lines = envContent.split('\n');
+            for (const line of lines) {
+                const trimmed = line.trim();
+                if (trimmed && !trimmed.startsWith('#') && trimmed.includes('=')) {
+                    const parts = trimmed.split('=');
+                    const key = parts[0].trim();
+                    const value = parts.slice(1).join('=').trim().replace(/^['"]|['"]$/g, '');
+                    if (key === 'PHP_API_BASE' || key === 'APP_URL') {
+                        PHP_API_BASE = value;
+                    }
                 }
             }
         }
+    } catch (e) {
+        console.error('Không thể nạp tệp .env:', e.message);
     }
-} catch (e) {
-    console.error('Không thể nạp tệp .env:', e.message);
 }
 
 // Bỏ dấu gạch chéo cuối nếu có
