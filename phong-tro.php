@@ -384,6 +384,7 @@ foreach ($rooms as $r) {
 
                         </div>
                     </div>
+                </div>
 
                     <?php
                     // Tính toán thông số thống kê ban đầu từ CSDL thông qua mảng $allRooms

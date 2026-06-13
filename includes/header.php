@@ -349,7 +349,12 @@
                     <li><a href="lien-he.php" class="<?php echo basename($_SERVER['PHP_SELF']) == 'lien-he.php' ? 'active' : ''; ?>">Liên hệ</a></li>
                     <li><a href="cong-dong.php" class="<?php echo basename($_SERVER['PHP_SELF']) == 'cong-dong.php' ? 'active' : ''; ?>">Cộng đồng</a></li>
                     <?php if(isset($_SESSION['user_id'])): ?>
-                        <li><a href="tin-nhan.php" class="<?php echo basename($_SERVER['PHP_SELF']) == 'tin-nhan.php' ? 'active' : ''; ?>">Tin nhắn</a></li>
+                        <li>
+                            <a href="tin-nhan.php" class="<?php echo basename($_SERVER['PHP_SELF']) == 'tin-nhan.php' ? 'active' : ''; ?>" style="position: relative; display: inline-flex; align-items: center; gap: 6px;">
+                                Tin nhắn
+                                <span id="global-msg-badge" style="display: none; background: #ef4444; color: #fff; font-size: 0.68rem; font-weight: 800; border-radius: 50%; width: 16px; height: 16px; align-items: center; justify-content: center; line-height: 1; flex-shrink: 0;">0</span>
+                            </a>
+                        </li>
                     <?php endif; ?>
 
                     <?php if(isset($_SESSION['username'])): ?>
@@ -944,7 +949,7 @@
         window.REALTIME_SERVER_URL = "<?= $_ENV['REALTIME_SERVER_URL'] ?? getenv('REALTIME_SERVER_URL') ?? '' ?>";
     </script>
     <!-- Custom realtime scripts -->
-    <script src="assets/js/chat-realtime.js?v=<?= time() ?>"></script>
+    <script src="assets/js/tin-nhan-dong-bo.js?v=<?= time() ?>"></script>
     <script src="assets/js/call-webrtc.js?v=<?= time() ?>"></script>
 <?php endif; ?>
 

@@ -96,10 +96,9 @@ function ensureCallUIExists() {
         `;
         document.body.appendChild(videoModal);
 
+        // Nút đóng: dọn dẹp Zego instance mà KHÔNG reload trang
         document.getElementById('btn-close-video-modal').onclick = () => {
-            document.getElementById('video-call-modal').style.display = 'none';
-            // Reload page to disconnect and clean up Zego prebuilt
-            window.location.reload();
+            teardownZegoCall();
         };
     }
 }
@@ -208,6 +207,31 @@ socket.on('call-rejected', (data) => {
 // Vì vậy, khi người nhận nhấn Accept, họ vào room. Người gọi sau khi gửi tín hiệu, ta sẽ cho họ tự động vào room ngay lập tức!
 // Hoặc để mượt mà hơn, khi A nhấn gọi, A hiển thị container video cuộc gọi, còn modal outbound chỉ hiển thị nhỏ phía trên.
 // Dưới đây là hàm tích hợp Zego Cloud Prebuilt Call Kit.
+// Biến lưu Zego instance để có thể huỷ sạch sau cuộc gọi
+window._zegoInstance = null;
+
+// Hàm dọn dẹp Zego instance mà KHÔNG reload trang
+function teardownZegoCall() {
+    const videoModal = document.getElementById('video-call-modal');
+    if (videoModal) videoModal.style.display = 'none';
+
+    // Xóa sạch nội dung container để giải phóng WebRTC tracks
+    const container = document.getElementById('video-call-container');
+    if (container) container.innerHTML = '';
+
+    // Huỷ instance Zego nếu SDK cung cấp method destroy/hangUp
+    if (window._zegoInstance) {
+        try {
+            if (typeof window._zegoInstance.hangUp === 'function') {
+                window._zegoInstance.hangUp();
+            } else if (typeof window._zegoInstance.destroy === 'function') {
+                window._zegoInstance.destroy();
+            }
+        } catch(e) { /* bỏ qua lỗi khi huỷ */ }
+        window._zegoInstance = null;
+    }
+}
+
 async function joinZegoCallRoom(roomId) {
     ensureCallUIExists();
 
@@ -231,11 +255,7 @@ async function joinZegoCallRoom(roomId) {
     if (!document.getElementById('call-spin-keyframes')) {
         const style = document.createElement('style');
         style.id = 'call-spin-keyframes';
-        style.textContent = `
-            @keyframes callSpin {
-                to { transform: rotate(360deg); }
-            }
-        `;
+        style.textContent = `@keyframes callSpin { to { transform: rotate(360deg); } }`;
         document.head.appendChild(style);
     }
 
@@ -258,34 +278,43 @@ async function joinZegoCallRoom(roomId) {
             throw new Error(data.message || 'Không thể tạo mã xác thực cuộc gọi từ máy chủ.');
         }
 
-        const kitToken = data.token;
+        const kitToken = ZegoUIKitPrebuilt.generateKitTokenForProduction(
+            data.app_id,
+            data.token,
+            roomId,
+            data.user_id,
+            data.user_name
+        );
 
         const zp = ZegoUIKitPrebuilt.create(kitToken);
+        window._zegoInstance = zp; // Lưu instance để teardown sau
+
         zp.joinRoom({
             container: container,
+            showPreJoinView: false,
             turnOnMicrophoneWhenJoining: true,
-            turnOnCameraWhenJoining: false,       // Tắt camera khi tham gia cuộc gọi
-            showMyCameraToggleButton: false,       // Ẩn nút camera để tránh bật nhầm
+            turnOnCameraWhenJoining: false,
+            showMyCameraToggleButton: false,
             showMyMicrophoneToggleButton: true,
-            showAudioVideoSettingsButton: false,   // Ẩn nút cài đặt camera/audio
-            showScreenSharingButton: false,       // Ẩn chia sẻ màn hình
-            showTextChat: false,                  // Ẩn chat phụ của Zego vì đã dùng chat của trang
-            showUserList: false,                  // Ẩn danh sách user
+            showAudioVideoSettingsButton: false,
+            showScreenSharingButton: false,
+            showTextChat: false,
+            showUserList: false,
             maxUsers: 2,
             layout: "Auto",
             showLayoutButton: false,
             scenario: {
-                mode: ZegoUIKitPrebuilt.OneONoneCall, // Chế độ gọi 1-1
+                mode: ZegoUIKitPrebuilt.OneONoneCall,
             },
             onLeaveRoom: () => {
-                videoModal.style.display = 'none';
-                window.location.reload();
+                // Dọn dẹp sạch KHÔNG reload trang để giữ kết nối Socket.io
+                teardownZegoCall();
             }
         });
     } catch (err) {
         console.error("Lỗi khởi tạo cuộc gọi WebRTC:", err);
         alert("Không thể kết nối cuộc gọi: " + err.message);
-        videoModal.style.display = 'none';
+        teardownZegoCall();
     }
 }
 

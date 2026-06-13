@@ -47,7 +47,7 @@ require_once 'includes/header.php';
                             <i class="fas fa-arrow-left"></i>
                         </button>
                         <div class="partner-avatar-wrapper" style="position: relative; flex-shrink: 0;">
-                            <img id="partner-avatar" src="assets/images/default_avatar.png" alt="Avatar" style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover;">
+                            <img id="partner-avatar" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="Avatar" style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover;">
                             <span id="partner-status-dot" class="status-dot offline" style="position: absolute; bottom: 0; right: 0; width: 12px; height: 12px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.15);"></span>
                         </div>
                         <div style="min-width: 0;">
@@ -241,7 +241,7 @@ async function loadContacts() {
     const currentUserId = document.getElementById('current-user-id').value;
 
     try {
-        const res = await fetch(`api/api-chat-users-get.php?user_id=${currentUserId}`);
+        const res = await fetch(`api/api-danh-sach-user.php?user_id=${currentUserId}`);
         const data = await res.json();
         
         if (data.status === 'success') {
@@ -278,19 +278,24 @@ function renderContacts(contacts) {
             : parseInt(c.is_online, 10) === 1;
         const statusClass = isOnline ? 'online' : 'offline';
         const statusText = isOnline ? 'Đang hoạt động' : 'Ngoại tuyến';
-        const avatarUrl = c.avatar.startsWith('http') ? c.avatar : `./${c.avatar}`;
+        const avatarUrl = (c.avatar.startsWith('http') || c.avatar.startsWith('data:')) ? c.avatar : `./${c.avatar}`;
+        const unreadCount = parseInt(c.unread_count) || 0;
+        const unreadBadge = unreadCount > 0 
+            ? `<div style="background: #ef4444; color: #fff; font-size: 0.75rem; font-weight: bold; border-radius: 20px; padding: 2px 8px; margin-left: 10px;">${unreadCount} mới</div>` 
+            : '';
 
         return `
-            <div class="contact-item" data-id="${c.id}" onclick="selectContact(${c.id}, '${c.hoten.replace(/'/g, "\\'")}', '${avatarUrl}')" style="display:flex; align-items:center; padding:12px 20px; cursor:pointer; border-bottom:1px solid var(--border-color, #f1f5f9); transition:all 0.15s; background: transparent;">
+            <div class="contact-item" data-id="${c.id}" data-avatar="${avatarUrl.startsWith('data:') ? 'svg-auto' : avatarUrl}" onclick="selectContact(${c.id}, '${c.hoten.replace(/'/g, "\\'")}', this.dataset.avatar === 'svg-auto' ? allContacts.find(x=>x.id==${c.id})?.avatar : this.dataset.avatar)" style="display:flex; align-items:center; padding:12px 20px; cursor:pointer; border-bottom:1px solid var(--border-color, #f1f5f9); transition:all 0.15s; background: transparent;">
                 <div style="position:relative; width:44px; height:44px; flex-shrink:0;">
                     <img src="${avatarUrl}" alt="Avatar" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">
                     <span class="status-dot ${statusClass}" data-user-id="${c.id}" style="position:absolute; bottom:0; right:0; width:12px; height:12px; border-radius:50%; border:2px solid #fff; box-shadow:0 1px 3px rgba(0,0,0,0.15);"></span>
                 </div>
-                <div style="margin-left:12px; flex:1; min-width:0;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
-                        <h4 style="font-size:0.92rem; font-weight:700; color:var(--text-color, #1e293b); margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${c.hoten}</h4>
+                <div style="margin-left:12px; flex:1; min-width:0; display:flex; align-items:center; justify-content:space-between;">
+                    <div style="flex:1; min-width:0;">
+                        <h4 style="font-size:0.92rem; font-weight:700; color:var(--text-color, #1e293b); margin:0; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${c.hoten}</h4>
+                        <span class="status-text text-xs ${isOnline ? 'text-green-500' : 'text-gray-400'}" data-user-id="${c.id}" style="font-size:0.75rem; font-weight:500;">${statusText}</span>
                     </div>
-                    <span class="status-text text-xs ${isOnline ? 'text-green-500' : 'text-gray-400'}" data-user-id="${c.id}" style="font-size:0.75rem; font-weight:500;">${statusText}</span>
+                    ${unreadBadge}
                 </div>
             </div>
         `;
@@ -379,6 +384,31 @@ async function selectContact(partnerId, partnerName, avatarUrl) {
         if (data.status === 'success') {
             document.getElementById('current-conv-id').value = data.conversation_id;
             renderChatHistory(data.messages);
+
+            // Đánh dấu đã đọc & xoá badge đỏ nếu có
+            const contactIndex = allContacts.findIndex(c => String(c.id) === String(partnerId));
+            if (contactIndex > -1 && parseInt(allContacts[contactIndex].unread_count) > 0) {
+                allContacts[contactIndex].unread_count = 0;
+                const selectedEl = document.querySelector(`.contact-item[data-id="${partnerId}"]`);
+                if (selectedEl) {
+                    const badge = selectedEl.querySelector('div[style*="background: #ef4444"]');
+                    if (badge) badge.remove();
+                }
+
+                // Cập nhật lại badge tổng trên thanh menu
+                if (typeof window.updateGlobalMessageBadge === 'function') {
+                    window.updateGlobalMessageBadge();
+                }
+                
+                fetch('api/api-mark-read.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        conversation_id: data.conversation_id,
+                        user_id: document.getElementById('current-user-id').value
+                    })
+                }).catch(err => console.error("Lỗi đánh dấu đã đọc:", err));
+            }
         } else {
             chatBox.innerHTML = `<p style="text-align:center;color:#ef4444;padding:20px;">Không thể tải tin nhắn.</p>`;
         }

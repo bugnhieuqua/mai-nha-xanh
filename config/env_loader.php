@@ -45,7 +45,7 @@ $envKeys = [
     'GROQ_API_KEY', 'GROQ_MODEL', 'GEMINI_API_KEY', 
     'ONESIGNAL_APP_ID', 'ONESIGNAL_REST_API_KEY', 
     'APP_DEBUG', 'ENABLE_RATE_LIMIT', 'GOOGLE_CLIENT_ID',
-    'ZEGO_APP_ID', 'ZEGO_SERVER_SECRET'
+    'ZEGO_APP_ID', 'ZEGO_SERVER_SECRET', 'REALTIME_SERVER_URL'
 ];
 foreach ($envKeys as $key) {
     if (!isset($_ENV[$key]) || $_ENV[$key] === '') {

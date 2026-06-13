@@ -175,7 +175,7 @@ function applyFilters() {
     if (search || priceFilter || areaFilter || statusFilter || locationFilter) {
         if (resultEl) {
             resultEl.style.display = 'block';
-            resultEl.textContent   = `Hiển thị ${visible}/${filteredRooms.length} phòng`;
+            resultEl.textContent   = `Hiển thị ${filteredRooms.length}/${totalRooms} phòng`;
         }
     } else {
         if (resultEl) resultEl.style.display = 'none';

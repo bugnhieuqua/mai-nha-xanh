@@ -10,7 +10,7 @@ const NotifSystem = (() => {
     apiUrl: "api/get-notifications.php",
     adminApiUrl: "api/admin-get-notifications.php",
     role: "user", // 'user' | 'admin'
-    pollInterval: 4000, // ms — poll mỗi 4 giây
+    pollInterval: 60000, // ms — poll mỗi 60 giây (an toàn cho ProFreeHost free tier)
     badgeEl: null, // element hiển thị số
     listEl: null, // element danh sách dropdown
   };

@@ -1,18 +1,14 @@
 <?php
 /**
- * zego-token.php — Server-side Zego Token04 Generator
- * 
- * Sinh token Zego (Token04) trực tiếp trên server bằng HMAC-SHA256.
- * An toàn hơn generateKitTokenForTest() phía client vì:
- *  - Không lộ serverSecret ra browser
- *  - Thời gian đồng bộ với server, tránh lỗi token expire (20014)
- *  - Có thể kiểm tra quyền trước khi cấp token
+ * zego-token.php — Server-side Zego Token04 Generator (Official AES-CBC Spec)
+ *
+ * Tham chiếu chính thức: https://docs.zegocloud.com/article/11649
  */
 header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/../config/bootstrap.php';
 
-// Bảo vệ: chỉ người đã đăng nhập mới được sinh token
+// Chỉ người đã đăng nhập mới được sinh token
 if (empty($_SESSION['user_id'])) {
     http_response_code(401);
     echo json_encode(['success' => false, 'message' => 'Bạn cần đăng nhập.']);
@@ -33,9 +29,9 @@ $userName = !empty($_SESSION['hoten'])
     ? $_SESSION['hoten']
     : (!empty($_SESSION['username']) ? $_SESSION['username'] : ('User_' . $userId));
 
-// Đọc credentials từ .env
-$appId        = intval($_ENV['ZEGO_APP_ID']        ?? getenv('ZEGO_APP_ID')        ?? 0);
-$serverSecret = $_ENV['ZEGO_SERVER_SECRET']         ?? getenv('ZEGO_SERVER_SECRET') ?? '';
+// Đọc credentials từ biến môi trường
+$appId        = intval($_ENV['ZEGO_APP_ID']     ?? getenv('ZEGO_APP_ID')     ?? 0);
+$serverSecret = $_ENV['ZEGO_SERVER_SECRET']      ?? getenv('ZEGO_SERVER_SECRET') ?? '';
 
 if ($appId === 0 || empty($serverSecret)) {
     http_response_code(500);
@@ -44,48 +40,87 @@ if ($appId === 0 || empty($serverSecret)) {
 }
 
 /**
- * Sinh Zego Token04
- * 
- * Cấu trúc binary (trước khi base64):
- *   [uint32 BE: payload_length] [payload JSON bytes] [HMAC-SHA256 32 bytes]
- * Token = "04" + base64(binary)
- * 
- * @param  int    $appId            AppID từ Zego Console
- * @param  string $userId           User ID (string)
- * @param  string $serverSecret     ServerSecret dạng hex 64 ký tự (= 32 bytes)
- * @param  int    $effectiveSeconds Thời gian hiệu lực tính bằng giây
- * @return string Token04 string
+ * Sinh Zego Token04 theo đúng spec chính thức (AES-CBC + IV + Expire time)
  */
-function generateZegoToken04(int $appId, string $userId, string $serverSecret, int $effectiveSeconds = 3600): string
+function generateZegoToken04(int $appId, string $userId, string $serverSecret, int $effectiveSeconds = 3600, string $payload = ''): string
 {
-    $createTime = time();
-    $expireTime = $createTime + $effectiveSeconds;
-    $nonce      = random_int(0, 0x7FFFFFFF);
+    if ($appId === 0) {
+        throw new Exception('appID invalid');
+    }
+    if ($userId === '') {
+        throw new Exception('userID invalid');
+    }
 
-    // Payload JSON — thứ tự key phải khớp với spec Zego
-    $payload = json_encode([
+    // Zego hỗ trợ 2 định dạng serverSecret:
+    // - 32 ký tự: dùng trực tiếp làm AES key (UTF-8 string)
+    // - 64 ký tự hex: chuyển sang binary trước (= 32 bytes)
+    $keyBin = (strlen($serverSecret) === 64 && ctype_xdigit($serverSecret))
+        ? hex2bin($serverSecret)
+        : $serverSecret;
+
+    $keyLen = strlen($keyBin);
+    switch ($keyLen) {
+        case 16:
+            $cipher = 'aes-128-cbc';
+            break;
+        case 24:
+            $cipher = 'aes-192-cbc';
+            break;
+        case 32:
+            $cipher = 'aes-256-cbc';
+            break;
+        default:
+            throw new Exception('Secret length must be 16, 24, or 32 bytes (or 64 hex characters). Actual length: ' . $keyLen);
+    }
+
+    $timestamp = time();
+    $expireTime = $timestamp + $effectiveSeconds;
+    
+    // Tạo 16 ký tự IV ngẫu nhiên từ bảng chữ cái thường gặp
+    $ivChars = '0123456789abcdefghijklmnopqrstuvwxyz';
+    $iv = '';
+    for ($i = 0; $i < 16; $i++) {
+        $iv .= $ivChars[random_int(0, 35)];
+    }
+
+    $nonce = random_int(0, 2147483647);
+
+    $data = [
         'app_id'   => $appId,
         'user_id'  => $userId,
         'nonce'    => $nonce,
-        'ctime'    => $createTime,
+        'ctime'    => $timestamp,
         'expire'   => $expireTime,
-        'payload'  => ''
-    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        'payload'  => $payload
+    ];
 
-    // Convert hex secret → binary (64 hex chars = 32 bytes)
-    $keyBin = hex2bin($serverSecret);
+    $plaintext = json_encode($data, JSON_BIGINT_AS_STRING);
 
-    // HMAC-SHA256(payload, key)
-    $hmac = hash_hmac('sha256', $payload, $keyBin, true); // raw binary = 32 bytes
+    $encrypted = openssl_encrypt($plaintext, $cipher, $keyBin, OPENSSL_RAW_DATA, $iv);
+    if ($encrypted === false) {
+        throw new Exception('Encryption failed: ' . openssl_error_string());
+    }
 
-    // Binary content: length(4B BE) + payload + hmac(32B)
-    $binary = pack('N', strlen($payload)) . $payload . $hmac;
+    // 64-bit big-endian unsigned integer pack format is 'J'.
+    $binary = pack('J', $expireTime);
+    $binary .= pack('n', strlen($iv)) . $iv;
+    $binary .= pack('n', strlen($encrypted)) . $encrypted;
 
     return '04' . base64_encode($binary);
 }
 
 try {
-    $token = generateZegoToken04($appId, $userId, $serverSecret, 3600);
+    // Để cuộc gọi ổn định, ta gán payload phân quyền vào room
+    $payload = json_encode([
+        'room_id' => $roomId,
+        'privilege' => [
+            1 => 1, // PrivilegeKeyLogin: Cho phép join room
+            2 => 1  // PrivilegeKeyPublish: Cho phép publish audio/video stream
+        ],
+        'stream_id_list' => []
+    ]);
+
+    $token = generateZegoToken04($appId, $userId, $serverSecret, 3600, $payload);
 
     echo json_encode([
         'success'   => true,

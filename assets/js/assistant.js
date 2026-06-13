@@ -1018,11 +1018,11 @@ if (!chatBody || !messageInput || !sendMessageButton || !chatbotToggler) {
     } catch(e) { /* silently ignore */ }
   };
 
-  // Tải lịch sử và bắt đầu polling
+  // Tải lịch sử và bắt đầu polling (30 giây để tránh vượt giới hạn hits của ProFreeHost)
   loadAdminHistory();
   setTimeout(() => {
     pollAdminReplies();
-    setInterval(pollAdminReplies, 2000);
+    setInterval(pollAdminReplies, 30000); // ✅ 30s thay vì 2s — tiết kiệm ~43k hits/ngày/user
   }, 1000);
 
   // === PHỤC HỒI BADGE KHI QUAY LẠI TRANG ===

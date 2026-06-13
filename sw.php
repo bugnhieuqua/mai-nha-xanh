@@ -72,12 +72,17 @@ self.addEventListener("fetch", (event) => {
   // 1. Skip chrome-extension and non-http requests
   if (!url.protocol.startsWith("http")) return;
 
-  // 2. Skip realtime sockets, WebRTC, and push notifications
+  // 2. Chỉ xử lý request của chính website (same-origin)
+  // Bỏ qua tất cả request đến domain ngoài như profreehost.com, lh3.googleusercontent.com, ...
+  const ownHostname = self.location.hostname;
+  if (url.hostname !== ownHostname) return;
+
+  // 3. Skip realtime sockets, WebRTC, and push notifications
   if (url.pathname.includes("socket.io") || url.port === "3000" || url.hostname.includes("onesignal") || url.hostname.includes("zego")) {
     return;
   }
 
-  // 3. API calls — always Network, no cache
+  // 4. API calls — always Network, no cache
   if (url.pathname.includes("/api/") || url.searchParams.has("ajax")) {
     event.respondWith(fetch(event.request, { cache: "no-store" }));
     return;
@@ -91,6 +96,12 @@ self.addEventListener("fetch", (event) => {
         .catch(() =>
           caches.match(event.request).then(
             (cached) => cached || caches.match(OFFLINE_URL)
+          ).then(
+            (fallback) => fallback || new Response("Bạn đang ngoại tuyến và trang này chưa được lưu cache.", {
+              status: 503,
+              statusText: "Service Unavailable",
+              headers: new Headers({ "Content-Type": "text/html; charset=utf-8" })
+            })
           )
         )
     );

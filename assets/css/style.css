@@ -3318,3 +3318,10 @@ body:has(.contact-section)::after {
 [data-theme="dark"] .stat-item p {
   color: #94a3b8 !important;
 }
+
+/* ── Bo góc cho toàn bộ hình ảnh khi đưa thành App (PWA) ── */
+img:not(.logo img):not(.avatar img):not(.rounded-full):not([class*="avatar"]):not([class*="circle"]):not(.status-dot):not(#chatbot-toggler img):not(.header-info img) {
+  border-radius: var(--radius, 16px) !important;
+  transition: border-radius 0.3s ease;
+}
+

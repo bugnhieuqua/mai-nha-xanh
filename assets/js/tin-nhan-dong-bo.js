@@ -1,5 +1,5 @@
 /**
- * chat-realtime.js - Real-time chat & status synchronization client-side
+ * tin-nhan-dong-bo.js - Real-time chat & status synchronization client-side
  */
 
 // Xác định địa chỉ Socket.io server dựa trên cấu hình PHP hoặc hostname hiện tại
@@ -121,21 +121,86 @@ function sendRealtimeMessage() {
         receiverId,
         messageContent: content
     });
+
+    // Đẩy người nhận lên đầu danh sách liên hệ của người gửi
+    if (typeof allContacts !== 'undefined' && typeof renderContacts === 'function') {
+        const receiverIdStr = String(receiverId);
+        const idx = allContacts.findIndex(c => String(c.id) === receiverIdStr);
+        if (idx > 0) { // idx > 0 nghĩa là chưa ở đầu
+            const receiverObj = allContacts.splice(idx, 1)[0];
+            allContacts.unshift(receiverObj);
+            renderContacts(allContacts);
+            // Giữ trạng thái active sau khi vẽ lại
+            document.querySelectorAll('.contact-item').forEach(item => {
+                item.style.background = String(item.dataset.id) === receiverIdStr
+                    ? 'var(--chat-bg-selected, #e2e8f0)'
+                    : 'transparent';
+            });
+        }
+    }
 }
 
 // Nhận tin nhắn từ người khác
 socket.on('receive-message', (data) => {
     const activeChatUser = document.getElementById('active-chat-user-id');
+    const senderIdStr = String(data.senderId);
     
     // Nếu người dùng đang mở đúng cuộc hội thoại với người gửi, hiển thị tin nhắn lên UI
-    if (activeChatUser && String(data.senderId) === String(activeChatUser.value)) {
+    if (activeChatUser && senderIdStr === String(activeChatUser.value)) {
         appendRealtimeMessageToUI(data.senderId, data.content, 'received');
+        
+        // Vì đang mở sẵn khung chat, gọi API ngầm báo đã đọc để tin nhắn không bị báo chưa đọc
+        fetch('api/api-mark-read.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                conversation_id: document.getElementById('current-conv-id')?.value || 0,
+                user_id: document.getElementById('current-user-id')?.value || 0
+            })
+        }).catch(err => console.log(err));
+
     } else {
         // Nếu không, hiển thị thông báo đẩy (Toast Notification) ở góc màn hình
         if (typeof NotifSystem !== 'undefined' && typeof NotifSystem.showToast === 'function') {
             NotifSystem.showToast("Tin nhắn mới", "Bạn có tin nhắn mới từ đối tác!", "new_chat");
         } else {
             console.log(`[New Message Toast] Bạn có tin nhắn từ ${data.senderId}: ${data.content}`);
+        }
+        
+        // Tăng huy hiệu đỏ (unread_count) lên +1
+        if (typeof allContacts !== 'undefined' && allContacts.length > 0) {
+            const idx = allContacts.findIndex(c => String(c.id) === senderIdStr);
+            if (idx > -1) {
+                allContacts[idx].unread_count = (parseInt(allContacts[idx].unread_count) || 0) + 1;
+            }
+        } else if (typeof loadContacts === 'function') {
+            loadContacts();
+        }
+
+        // Cập nhật badge tổng số tin nhắn chưa đọc lên +1
+        if (typeof window.updateGlobalMessageBadge === 'function') {
+            window.updateGlobalMessageBadge(1);
+        }
+    }
+
+    // Đẩy người gửi lên vị trí đầu tiên trong danh sách liên hệ (Sắp xếp thời gian thực)
+    if (typeof allContacts !== 'undefined' && typeof renderContacts === 'function') {
+        const idx = allContacts.findIndex(c => String(c.id) === senderIdStr);
+        if (idx > -1) {
+            const senderObj = allContacts.splice(idx, 1)[0];
+            allContacts.unshift(senderObj); // Đưa lên đầu mảng
+            renderContacts(allContacts);    // Vẽ lại danh sách
+            
+            // Giữ lại hiệu ứng nền (selected/active) cho liên hệ đang trò chuyện
+            if (activeChatUser && activeChatUser.value) {
+                const activeId = activeChatUser.value;
+                document.querySelectorAll('.contact-item').forEach(item => {
+                    item.style.background = 'transparent';
+                    if (String(item.dataset.id) === String(activeId)) {
+                        item.style.background = 'var(--chat-bg-selected, #e2e8f0)';
+                    }
+                });
+            }
         }
     }
 });
@@ -180,7 +245,59 @@ function appendRealtimeMessageToUI(senderId, text, direction) {
     chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-// Lắng nghe phím Enter trong ô nhập tin nhắn
+// Định nghĩa biến lưu trữ tổng số tin nhắn chưa đọc trong memory
+window.unreadMsgCount = 0;
+
+// Hàm cập nhật badge tổng số tin nhắn chưa đọc trên thanh menu (Tin nhắn)
+window.updateGlobalMessageBadge = function(increment = 0) {
+    const badge = document.getElementById('global-msg-badge');
+    if (!badge) return;
+
+    if (typeof allContacts !== 'undefined' && allContacts.length > 0) {
+        // Nếu đang ở trang tin-nhan.php và danh bạ đã tải xong
+        const total = allContacts.reduce((sum, c) => sum + (parseInt(c.unread_count) || 0), 0);
+        window.unreadMsgCount = total;
+        if (total > 0) {
+            badge.innerText = total > 99 ? '99+' : total;
+            badge.style.display = 'inline-flex';
+        } else {
+            badge.style.display = 'none';
+        }
+    } else {
+        // Nếu ở các trang khác hoặc danh bạ chưa load
+        if (increment > 0) {
+            window.unreadMsgCount += increment;
+            if (window.unreadMsgCount > 0) {
+                badge.innerText = window.unreadMsgCount > 99 ? '99+' : window.unreadMsgCount;
+                badge.style.display = 'inline-flex';
+            } else {
+                badge.style.display = 'none';
+            }
+        } else {
+            // Lần đầu load trang: fetch lấy tổng chưa đọc
+            const userEl = document.getElementById('current-user-id');
+            if (userEl && userEl.value) {
+                fetch(`api/api-danh-sach-user.php?user_id=${userEl.value}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.status === 'success' && data.contacts) {
+                            const total = data.contacts.reduce((sum, c) => sum + (parseInt(c.unread_count) || 0), 0);
+                            window.unreadMsgCount = total;
+                            if (total > 0) {
+                                badge.innerText = total > 99 ? '99+' : total;
+                                badge.style.display = 'inline-flex';
+                            } else {
+                                badge.style.display = 'none';
+                            }
+                        }
+                    })
+                    .catch(err => console.log('Lỗi cập nhật badge tin nhắn:', err));
+            }
+        }
+    }
+};
+
+// Lắng nghe phím Enter trong ô nhập tin nhắn & Khởi tạo badge tổng khi load trang
 document.addEventListener('DOMContentLoaded', () => {
     const messageInput = document.getElementById('message-input');
     if (messageInput) {
@@ -191,4 +308,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+    
+    // Tự động chạy lần đầu để nạp số tin nhắn chưa đọc lên menu
+    window.updateGlobalMessageBadge();
 });
