@@ -32,3 +32,4 @@ test_debug.php
 # Node.js dependencies
 node_modules/
 backend_realtime/node_modules/
+test-env.php

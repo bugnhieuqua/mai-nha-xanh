@@ -69,6 +69,9 @@ $sidebar_initial = strtoupper(function_exists('mb_substr')
         <div class="nav-divider-glow" aria-hidden="true"></div>
 
         <div class="nav-section-label">Nội dung</div>
+        <a href="trolyAI.php" class="nav-item <?= $current_page == 'trolyAI.php' ? 'active' : '' ?>">
+            <i class="fas fa-robot"></i> Chatbot Admin
+        </a>
         <a href="posts.php" class="nav-item <?= $current_page == 'posts.php' ? 'active' : '' ?>">
             <i class="fas fa-home"></i> Bài đăng phòng trọ
             <span class="nav-badge badge-tone-amber" id="nav-badge-posts"

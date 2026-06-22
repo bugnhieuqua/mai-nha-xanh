@@ -71,6 +71,54 @@ $stmt = $db->query("
 ");
 $recent_chats = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+// --- Extra stats & widgets queries ---
+$approved_posts = 0;
+$rejected_posts = 0;
+try {
+    $stmt = $db->query("SELECT trangthai, COUNT(*) as cnt FROM dangbai_chothuetro GROUP BY trangthai");
+    $raw_trangthai = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+    $approved_posts = (int)($raw_trangthai['da_duyet'] ?? 0);
+    $rejected_posts = (int)($raw_trangthai['tu_choi'] ?? 0);
+} catch (Exception $e) {}
+
+$total_users = 0;
+try {
+    $stmt = $db->query("SELECT COUNT(*) FROM users");
+    $total_users = (int)$stmt->fetchColumn();
+} catch (Exception $e) { $total_users = 0; }
+
+$posts_today = 0;
+try {
+    $stmt = $db->query("SELECT COUNT(*) FROM dangbai_chothuetro WHERE DATE(ngaydang) = CURDATE()");
+    $posts_today = (int)$stmt->fetchColumn();
+} catch (Exception $e) { $posts_today = 0; }
+
+$topPosters = [];
+try {
+    $stmt = $db->query("
+        SELECT nguoidang, COUNT(*) as post_count,
+               SUM(CASE WHEN trangthai='cho_duyet' THEN 1 ELSE 0 END) as pending
+        FROM dangbai_chothuetro
+        WHERE nguoidang IS NOT NULL AND nguoidang != ''
+        GROUP BY nguoidang
+        ORDER BY post_count DESC
+        LIMIT 5
+    ");
+    $topPosters = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {}
+
+$recentPending = [];
+try {
+    $stmt = $db->query("
+        SELECT id, tieude, diachi, gia, nguoidang, ngaydang, hinhanh
+        FROM dangbai_chothuetro
+        WHERE trangthai = 'cho_duyet'
+        ORDER BY ngaydang DESC
+        LIMIT 8
+    ");
+    $recentPending = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {}
+
 $admin_name = $_SESSION['username'] ?? 'Admin';
 $admin_initial = strtoupper(function_exists('mb_substr')
     ? mb_substr($admin_name, 0, 1, 'UTF-8')
@@ -337,6 +385,120 @@ $chat_avg_per_session = $chatbot_sessions > 0 ? ($chatbot_today / $chatbot_sessi
                 <?php endif; ?>
             </div>
         </div>
+
+        <!-- NEW: Pending posts & top posters widgets -->
+        <div class="dashboard-content-grid" id="pending-posters-grid" style="grid-template-columns: 2fr 1fr; margin-top: 24px;">
+            <!-- CARD 1: Danh sách bài đang chờ duyệt (Pending posts) -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title"><i class="fas fa-clock" style="color: #f59e0b;"></i> Bài đăng đang chờ duyệt</div>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <span class="badge badge-warning"><?= number_format($pending_posts) ?> bài chờ</span>
+                        <a href="posts.php?status=cho_duyet" class="btn btn-xs btn-outline">Quản lý</a>
+                    </div>
+                </div>
+                <?php if (empty($recentPending)): ?>
+                    <div class="empty-state">
+                        <i class="fas fa-check-circle" style="color: #10b981; font-size: 2.5rem; margin-bottom: 12px;"></i>
+                        <h4>Không có bài chờ duyệt</h4>
+                        <p>Tất cả bài đăng đã được phê duyệt hoặc từ chối.</p>
+                    </div>
+                <?php else: ?>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Phòng trọ</th>
+                                    <th>Người đăng</th>
+                                    <th>Giá thuê</th>
+                                    <th style="text-align:right;">Hành động</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            <?php foreach ($recentPending as $p): ?>
+                                <tr>
+                                    <td>
+                                        <div class="post-cell">
+                                            <?php if ($p['hinhanh']): ?>
+                                                <img src="<?= htmlspecialchars(buildMediaUrl($p['hinhanh'] ?? '', '..')) ?>" class="post-thumb" onerror="this.onerror=null; this.src='../assets/images/myhome.png';">
+                                            <?php endif; ?>
+                                            <div class="post-title" title="<?= htmlspecialchars($p['tieude']) ?>">
+                                                <?= htmlspecialchars($p['tieude']) ?>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td><?= htmlspecialchars($p['nguoidang'] ?? '—') ?></td>
+                                    <td class="price-text"><?= number_format((float)$p['gia']) ?> ₫</td>
+                                    <td class="table-cell-right">
+                                        <a href="posts.php?id=<?= (int)$p['id'] ?>" class="btn btn-xs btn-primary" style="padding: 4px 8px; font-size: 0.72rem;">Duyệt / Chi tiết</a>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endif; ?>
+            </div>
+
+            <!-- CARD 2: Top người đăng bài & Thống kê phụ (Top Posters & Extra Stats) -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title"><i class="fas fa-trophy" style="color: #f59e0b;"></i> Top người đăng bài</div>
+                    <span class="dashboard-note">Tích cực nhất</span>
+                </div>
+                <div class="card-body" style="padding: 15px 20px;">
+                    <?php if (empty($topPosters)): ?>
+                        <p style="text-align: center; color: var(--text-muted); font-size: 0.82rem; margin: 20px 0;">Chưa có dữ liệu thành viên</p>
+                    <?php else: ?>
+                        <div class="ctx-posters-list" style="display: flex; flex-direction: column; gap: 10px;">
+                            <?php foreach ($topPosters as $poster): ?>
+                                <?php
+                                $poster_name = $poster['nguoidang'] ?? 'User';
+                                $initial = strtoupper(function_exists('mb_substr') ? mb_substr($poster_name, 0, 1, 'UTF-8') : substr($poster_name, 0, 1));
+                                ?>
+                                <div class="ctx-poster-item" style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,0.4); border: 1px solid rgba(16, 185, 129, 0.08);">
+                                    <div class="ctx-poster-avatar" style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #10b981, #059669); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 0.8rem; font-weight: 700; flex-shrink: 0;">
+                                        <?= htmlspecialchars($initial) ?>
+                                    </div>
+                                    <div class="ctx-poster-info" style="flex: 1; min-width: 0;">
+                                        <div class="ctx-poster-name" style="font-size: 0.82rem; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                            <?= htmlspecialchars($poster_name) ?>
+                                        </div>
+                                        <div style="font-size: 0.72rem; color: var(--text-muted);">
+                                            <?= $poster['post_count'] ?> bài đăng
+                                        </div>
+                                    </div>
+                                    <?php if ($poster['pending'] > 0): ?>
+                                        <span class="badge badge-warning" style="font-size: 0.65rem; padding: 2px 6px;"><?= $poster['pending'] ?> chờ</span>
+                                    <?php endif; ?>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+
+                    <!-- Extra Quick Stats Summary -->
+                    <div style="margin-top: 20px; padding-top: 15px; border-top: 1px dashed rgba(16, 185, 129, 0.2); display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div style="background: rgba(16, 185, 129, 0.06); padding: 8px 10px; border-radius: 10px; text-align: center;">
+                            <div style="font-size: 1.1rem; font-weight: 800; color: #065f46;"><?= number_format($total_users) ?></div>
+                            <div style="font-size: 0.65rem; color: var(--text-muted);">Tổng Thành Viên</div>
+                        </div>
+                        <div style="background: rgba(139, 92, 246, 0.06); padding: 8px 10px; border-radius: 10px; text-align: center;">
+                            <div style="font-size: 1.1rem; font-weight: 800; color: #7c3aed;"><?= number_format($posts_today) ?></div>
+                            <div style="font-size: 0.65rem; color: var(--text-muted);">Bài mới Hôm nay</div>
+                        </div>
+                        <div style="background: rgba(59, 130, 246, 0.06); padding: 8px 10px; border-radius: 10px; text-align: center;">
+                            <div style="font-size: 1.1rem; font-weight: 800; color: #1d4ed8;"><?= number_format($total_posts) ?></div>
+                            <div style="font-size: 0.65rem; color: var(--text-muted);">Tổng số Bài đăng</div>
+                        </div>
+                        <div style="background: rgba(239, 68, 68, 0.06); padding: 8px 10px; border-radius: 10px; text-align: center;">
+                            <div style="font-size: 1.1rem; font-weight: 800; color: #dc2626;"><?= number_format($rejected_posts) ?></div>
+                            <div style="font-size: 0.65rem; color: var(--text-muted);">Tổng số Từ chối</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
     </div>
 </main>
 
@@ -470,6 +632,13 @@ async function refreshDashboard() {
         const currentContentGrid = document.querySelector('.dashboard-content-grid');
         if (newContentGrid && currentContentGrid) {
             currentContentGrid.innerHTML = newContentGrid.innerHTML;
+        }
+
+        // Swap pending-posters-grid
+        const newPendingGrid = doc.getElementById('pending-posters-grid');
+        const currentPendingGrid = document.getElementById('pending-posters-grid');
+        if (newPendingGrid && currentPendingGrid) {
+            currentPendingGrid.innerHTML = newPendingGrid.innerHTML;
         }
     } catch(e) {
         console.error("Dashboard dynamic refresh failed:", e);

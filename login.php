@@ -634,9 +634,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <?php endif; ?>
 
         <!-- LOGIN FORM -->
-        <div id="login-form" class="<?php echo (!empty($showRegisterForm) && $showRegisterForm) ? 'hidden' : ''; ?>">
-            <div class="form-header">
-                <h2>Đăng Nhập</h2>
+        <div id="login-form" class="<?php echo (!empty($showRegisterForm) && $showRegisterForm) ? 'hidden' : ''; ?>" >
+            <div class="form-header"style="height:1px !important;">
             </div>
             <form method="POST" action="">
                 <input type="hidden" name="action" value="login">
