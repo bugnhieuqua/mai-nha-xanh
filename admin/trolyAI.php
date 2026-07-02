@@ -339,7 +339,7 @@ async function sendMessage() {
         formData.append('message', msg);
         formData.append('history', JSON.stringify(chatHistory.slice(-20)));
 
-        const res = await fetch('../api/admin_chatbot.php', {
+        const res = await fetch('../api/troly_ai.php', {
             method: 'POST',
             headers: { 
                 'X-Requested-With': 'XMLHttpRequest'
