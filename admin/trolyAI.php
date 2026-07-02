@@ -194,7 +194,7 @@ $admin_name = $_SESSION['username'] ?? 'Admin';
         </div>
         <div class="topbar-right" style="display:flex;align-items:center;gap:16px;">
             <span style="font-size:.8rem;color:var(--text-muted);display:flex;align-items:center;gap:5px;">
-                <i class="fas fa-robot" style="color:var(--accent);"></i> Powered by Groq AI
+                <i class="fas fa-robot" style="color:var(--accent);"></i>AI
             </span>
             <?php if(!empty($_SESSION['avatar'])): ?>
                 <img src="../<?= htmlspecialchars($_SESSION['avatar']) ?>" class="admin-avatar" style="object-fit:cover;" alt="Avatar">
@@ -335,30 +335,24 @@ async function sendMessage() {
     setLoading(true);
 
     try {
+        const formData = new FormData();
+        formData.append('message', msg);
+        formData.append('history', JSON.stringify(chatHistory.slice(-20)));
+
         const res = await fetch('../api/admin_chatbot.php', {
             method: 'POST',
             headers: { 
-                'Content-Type': 'application/json',
                 'X-Requested-With': 'XMLHttpRequest'
             },
             credentials: 'include',
-            body: JSON.stringify({ message: msg, history: chatHistory.slice(-20) })
+            body: formData
         });
 
         if (res.status === 401 || res.status === 403) {
             typingEl.remove();
             const errData = await res.json().catch(() => ({}));
-            const msgText = errData.message || 'Phiên đăng nhập đã hết hạn hoặc không có quyền truy cập.';
-            appendMessage('ai', '⚠️ ' + msgText);
-            Swal.fire({
-                title: 'Phiên làm việc hết hạn',
-                text: msgText + ' Vui lòng đăng nhập lại.',
-                icon: 'warning',
-                confirmButtonColor: '#10b981',
-                confirmButtonText: 'Đăng nhập lại'
-            }).then(() => {
-                window.location.href = '../login.php';
-            });
+            const msgText = errData.message || 'Phiên làm việc đã hết hạn hoặc chưa xác thực Admin.';
+            appendMessage('ai', `⚠️ **${msgText}**\nVui lòng bấm vào đây để [Đăng nhập lại](../login.php).`);
             return;
         }
 
@@ -372,7 +366,7 @@ async function sendMessage() {
         }
     } catch (e) {
         typingEl.remove();
-        appendMessage('ai', '❌ Lỗi kết nối server (HTTP 403 / Network Error). Vui lòng kiểm tra lại cấu hình Hosting / Session.');
+        appendMessage('ai', '❌ Lỗi kết nối server. Vui lòng kiểm tra lại hosting.');
     } finally {
         setLoading(false);
     }

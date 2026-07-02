@@ -39,9 +39,12 @@ $rawInput = file_get_contents('php://input');
 $input = json_decode($rawInput, true);
 if (!$input && !empty($_POST)) {
     $input = $_POST;
+    if (isset($_POST['history']) && is_string($_POST['history'])) {
+        $input['history'] = json_decode($_POST['history'], true) ?: [];
+    }
 }
 
-if (!$input || !isset($input['message'])) {
+if (!$input || empty($input['message'])) {
     echo json_encode(['success' => false, 'message' => 'Thiếu nội dung tin nhắn']);
     exit;
 }

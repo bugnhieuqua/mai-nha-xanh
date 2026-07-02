@@ -1,8 +1,4 @@
-<IfModule mod_security.c>
-    SecFilterEngine Off
-    SecFilterScanPOST Off
-</IfModule>
-
+# Clean .htaccess compatible with ProFreeHost / ByetHost / InfinityFree
 <IfModule mod_headers.c>
     Header set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With, X-CSRF-Token"
     Header set Access-Control-Allow-Methods "GET, POST, OPTIONS, DELETE, PUT"
