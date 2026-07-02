@@ -213,7 +213,7 @@ $admin_name = $_SESSION['username'] ?? 'Admin';
                 <div class="chat-header-avatar"><i class="fas fa-robot"></i></div>
                 <div class="chat-header-info">
                     <h2>Admin AI Assistant</h2>
-                    <div class="chat-header-status">Trực tuyến — Tự động xác nhận trước khi thực hiện</div>
+                    <div class="chat-header-status">Trực tuyến — Trợ lý AI Quản trị Mái Nhà Xanh</div>
                 </div>
                 <div class="chat-header-actions">
                     <button class="btn btn-sm btn-outline" onclick="clearChat()" style="height:auto;padding:7px 12px;">
@@ -228,11 +228,13 @@ $admin_name = $_SESSION['username'] ?? 'Admin';
 
             <div class="chat-input-area">
                 <div class="quick-cmds">
+                    <div class="quick-cmd" onclick="sendQuickCommand('Xuất excel tổng hợp toàn bộ người đăng bài')"><i class="fas fa-file-excel" style="color:#107c41;"></i> Excel Người đăng</div>
+                    <div class="quick-cmd" onclick="sendQuickCommand('Xuất excel các bài đăng bị từ chối/hủy')"><i class="fas fa-file-excel" style="color:#ef4444;"></i> Excel Bài từ chối</div>
+                    <div class="quick-cmd" onclick="sendQuickCommand('Xuất excel các bài đăng chờ duyệt')"><i class="fas fa-file-excel" style="color:#f59e0b;"></i> Excel Bài chờ duyệt</div>
+                    <div class="quick-cmd" onclick="sendQuickCommand('Xuất excel tất cả tài khoản người dùng')"><i class="fas fa-file-excel" style="color:#3b82f6;"></i> Excel Người dùng</div>
                     <div class="quick-cmd" onclick="sendQuickCommand('Liệt kê 10 bài chờ duyệt mới nhất')">📋 Chờ duyệt</div>
                     <div class="quick-cmd" onclick="sendQuickCommand('Thống kê tổng quan hệ thống hôm nay')">📊 Thống kê</div>
                     <div class="quick-cmd" onclick="sendQuickCommand('Top 5 người đăng bài nhiều nhất')">🏆 Top poster</div>
-                    <div class="quick-cmd" onclick="sendQuickCommand('Bài đăng được đăng hôm nay')">📅 Hôm nay</div>
-                    <div class="quick-cmd" onclick="sendQuickCommand('Thống kê người dùng hệ thống')">👥 Users</div>
                 </div>
                 <div class="chat-input-wrap">
                     <textarea id="chatInput" placeholder="Nhập lệnh cho AI... (VD: Duyệt bài ID 5, Liệt kê bài chờ, Xóa bài vi phạm...)" rows="1"></textarea>
@@ -301,7 +303,7 @@ function showAutoGreeting() {
         </div>`;
     }
 
-    const greetingMd = `Chào ${timeGreet}, **${ADMIN_NAME}**! 👋\n\nTôi là **Admin AI Assistant** — Mái Nhà Xanh. Tóm tắt hệ thống lúc bạn đăng nhập:\n\n- 📋 **Chờ duyệt:** ${PENDING_COUNT} bài\n- ✅ **Đã duyệt:** ${APPROVED_COUNT} bài\n- 📦 **Tổng cộng:** ${TOTAL_COUNT} bài đăng\n\nTôi hỗ trợ **duyệt, từ chối, xóa** từng bài hoặc hàng loạt. Mọi thao tác sẽ có **bước xác nhận** trước khi thực hiện.`;
+    const greetingMd = `Chào ${timeGreet}, **${ADMIN_NAME}**! 👋\n\nTôi là **Admin AI Assistant** — Mái Nhà Xanh. Tóm tắt hệ thống lúc bạn đăng nhập:\n\n- 📋 **Chờ duyệt:** ${PENDING_COUNT} bài\n- ✅ **Đã duyệt:** ${APPROVED_COUNT} bài\n- 📦 **Tổng cộng:** ${TOTAL_COUNT} bài đăng\n\nTôi hỗ trợ **tra cứu, thống kê, xuất Excel** tự động trơn tru và **duyệt/từ chối/xóa bài đăng** an toàn.`;
 
     const container = document.getElementById('chatMessages');
     const el = document.createElement('div');
@@ -335,9 +337,31 @@ async function sendMessage() {
     try {
         const res = await fetch('../api/admin_chatbot.php', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            credentials: 'include',
             body: JSON.stringify({ message: msg, history: chatHistory.slice(-20) })
         });
+
+        if (res.status === 401 || res.status === 403) {
+            typingEl.remove();
+            const errData = await res.json().catch(() => ({}));
+            const msgText = errData.message || 'Phiên đăng nhập đã hết hạn hoặc không có quyền truy cập.';
+            appendMessage('ai', '⚠️ ' + msgText);
+            Swal.fire({
+                title: 'Phiên làm việc hết hạn',
+                text: msgText + ' Vui lòng đăng nhập lại.',
+                icon: 'warning',
+                confirmButtonColor: '#10b981',
+                confirmButtonText: 'Đăng nhập lại'
+            }).then(() => {
+                window.location.href = '../login.php';
+            });
+            return;
+        }
+
         const data = await res.json();
         typingEl.remove();
         if (data.success) {
@@ -348,7 +372,7 @@ async function sendMessage() {
         }
     } catch (e) {
         typingEl.remove();
-        appendMessage('ai', '❌ Lỗi kết nối. Vui lòng kiểm tra lại server.');
+        appendMessage('ai', '❌ Lỗi kết nối server (HTTP 403 / Network Error). Vui lòng kiểm tra lại cấu hình Hosting / Session.');
     } finally {
         setLoading(false);
     }
@@ -547,6 +571,28 @@ function buildActionCard(result) {
                 ${ok ? 'Thao tác thành công' : 'Thao tác thất bại'}
             </div>
             <div class="action-card-body" style="padding:10px 14px;font-size:0.82rem;">${escapeHtml(r?.message || '—')}</div>
+        </div>`;
+    }
+
+    // Excel Export Card
+    if (result.type === 'excel_export') {
+        return `<div class="action-card" style="margin-top:12px; border: 1.5px solid #107c41; border-radius: 14px; overflow: hidden; box-shadow: 0 4px 15px rgba(16,124,65,0.15);">
+            <div class="action-card-header" style="background: linear-gradient(135deg, #107c41 0%, #1f9a55 100%); color: #ffffff; padding: 12px 16px; font-weight: 700; font-size: 0.88rem; display: flex; align-items: center; justify-content: space-between;">
+                <span><i class="fas fa-file-excel" style="font-size: 1.1rem; margin-right: 8px;"></i> ${escapeHtml(result.label || 'Xuất File Excel')}</span>
+                <span style="font-size: 0.72rem; background: rgba(255,255,255,0.2); padding: 3px 8px; border-radius: 12px; font-weight: 600;">.XLS (UTF-8)</span>
+            </div>
+            <div class="action-card-body" style="padding: 14px 16px; background: #ffffff;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                    <div>
+                        <div style="font-weight: 700; font-size: 0.95rem; color: #1e293b; margin-bottom: 2px;">${escapeHtml(result.title)}</div>
+                        <div style="font-size: 0.78rem; color: #64748b;">Dữ liệu sẵn sàng: <strong style="color: #107c41;">${result.count || 0}</strong> mục</div>
+                    </div>
+                    <div style="font-size: 2.2rem; color: #107c41; opacity: 0.85;"><i class="fas fa-file-csv"></i></div>
+                </div>
+                <a href="${escapeHtml(result.download_url)}" target="_blank" class="post-result-btn" style="display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 11px; background: linear-gradient(135deg, #107c41, #0b5c30); color: #ffffff; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 0.88rem; box-shadow: 0 4px 12px rgba(16,124,65,0.25); transition: all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
+                    <i class="fas fa-download"></i> Tải Xuất File Excel Ngay (${result.count || 0} mục)
+                </a>
+            </div>
         </div>`;
     }
     return '';

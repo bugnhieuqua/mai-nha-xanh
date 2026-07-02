@@ -3325,3 +3325,55 @@ img:not(.logo img):not(.avatar img):not(.rounded-full):not([class*="avatar"]):no
   transition: border-radius 0.3s ease;
 }
 
+/* ── UNIVERSAL DARK MODE HIGH-CONTRAST READABILITY FIXES ── */
+[data-theme="dark"] label {
+  color: #f1f5f9 !important;
+  font-weight: 600 !important;
+}
+
+[data-theme="dark"] p,
+[data-theme="dark"] span:not(.badge):not(.status-pill),
+[data-theme="dark"] li,
+[data-theme="dark"] td {
+  color: #e2e8f0 !important;
+}
+
+[data-theme="dark"] th {
+  color: #f8fafc !important;
+  background-color: rgba(15, 23, 42, 0.9) !important;
+}
+
+[data-theme="dark"] small,
+[data-theme="dark"] .text-muted,
+[data-theme="dark"] .subtitle {
+  color: #cbd5e1 !important;
+}
+
+[data-theme="dark"] input:not([type="submit"]):not([type="button"]):not([type="checkbox"]):not([type="radio"]),
+[data-theme="dark"] textarea,
+[data-theme="dark"] select,
+[data-theme="dark"] .form-control {
+  background-color: #1e293b !important;
+  color: #ffffff !important;
+  border-color: #475569 !important;
+}
+
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder,
+[data-theme="dark"] select::placeholder,
+[data-theme="dark"] .form-control::placeholder {
+  color: #94a3b8 !important;
+  opacity: 1 !important;
+}
+
+/* Fix hardcoded inline white cards with dark mode text */
+[data-theme="dark"] div[style*="background: rgba(255, 255, 255"],
+[data-theme="dark"] div[style*="background: #fff"],
+[data-theme="dark"] div[style*="background:#fff"],
+[data-theme="dark"] div[style*="background: white"],
+[data-theme="dark"] div[style*="background:white"] {
+  background: #1e293b !important;
+  color: #f8fafc !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+

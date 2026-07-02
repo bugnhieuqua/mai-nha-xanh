@@ -36,10 +36,23 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             // --- REGISTER LOGIC ---
             $username = $_POST['reg_username'] ?? '';
             $password = $_POST['reg_password'] ?? '';
+            $password_confirm = $_POST['reg_password_confirm'] ?? '';
             $email = $_POST['reg_email'] ?? '';
             $showRegisterForm = true; // Giữ form đăng ký hiển thị khi có lỗi
 
-            if ($username && $password && $email) {
+            if ($username && $password && $password_confirm && $email) {
+                $hasMinLen = strlen($password) >= 8;
+                $hasUpper = preg_match('/[A-Z]/', $password);
+                $hasNumber = preg_match('/[0-9]/', $password);
+                $hasSpecial = preg_match('/[^A-Za-z0-9]/', $password);
+
+                if ($password !== $password_confirm) {
+                    $message = "Mật khẩu xác nhận không trùng khớp.";
+                    $messageType = 'error';
+                } elseif (!$hasMinLen || !$hasUpper || !$hasNumber || !$hasSpecial) {
+                    $message = "Mật khẩu bắt buộc tối thiểu 8 ký tự, bao gồm chữ hoa, chữ số và ký tự đặc biệt.";
+                    $messageType = 'error';
+                } else {
                 try {
                     // Kiểm tra trùng username VÀ email cùng lúc
                     $check_query = "SELECT username, email FROM users WHERE username = :username OR email = :email LIMIT 2";
@@ -85,6 +98,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     $message = "Lỗi hệ thống: " . $e->getMessage();
                     $messageType = 'error';
                 }
+            }
             } else {
                 $message = "Vui lòng điền đầy đủ thông tin đăng ký.";
                 $messageType = 'error';
@@ -321,12 +335,33 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             position: relative;
         }
 
-        /* Animated Background */
+        /* Video Background & Overlay */
+        .bg-video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: -3;
+        }
+
+        .bg-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.45); /* Dark transparent overlay for text legibility */
+            z-index: -2;
+        }
+
+        /* Animated Background (Fallback when video is not playing) */
         .shape {
             position: absolute;
             border-radius: 50%;
             filter: blur(80px);
-            z-index: -1;
+            z-index: -4;
             animation: move 12s infinite alternate;
             opacity: 0.6;
         }
@@ -362,10 +397,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             background: rgba(255, 255, 255, 0.15);
             box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
             backdrop-filter: blur(12px);
-            border-radius: 25px;
-            border: 1px solid rgba(255, 255, 255, 0.18);
-            width: 420px;
-            padding: 40px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            width: 380px;
+            max-width: 92vw;
+            padding: 24px 28px 20px;
             text-align: center;
             position: relative;
             z-index: 1;
@@ -374,10 +410,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         .close-btn {
             position: absolute;
-            top: 20px;
-            right: 20px;
-            color: rgba(255, 255, 255, 0.7);
-            font-size: 1.5rem;
+            top: 16px;
+            right: 18px;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1.3rem;
             cursor: pointer;
             text-decoration: none;
             transition: 0.3s;
@@ -389,11 +425,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
 
         .logo {
-            width: 120px;
-            height: 120px;
+            width: 75px;
+            height: 75px;
             background: rgba(255, 255, 255, 0.95);
             border-radius: 50%;
-            margin: 0 auto 20px;
+            margin: 0 auto 10px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -410,87 +446,91 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         .form-header h2 {
             color: #fff;
-            font-size: 1.8rem;
+            font-size: 1.5rem;
             font-weight: 700;
-            margin-bottom: 20px;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 14px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
 
         .input-group {
             position: relative;
-            margin-bottom: 20px;
+            margin-bottom: 12px;
         }
 
         .input-group i {
             position: absolute;
-            left: 20px;
+            left: 18px;
             top: 50%;
             transform: translateY(-50%);
-            color: #1e293b;
-            /* Dark Slate for visibility */
+            color: #475569;
+            font-size: 0.95rem;
             z-index: 2;
         }
 
         .input-group input {
             width: 100%;
-            padding: 15px 20px 15px 50px;
-            border: 2px solid rgba(255, 255, 255, 0.1);
-            background: rgba(255, 255, 255, 0.15);
+            padding: 12px 42px 12px 48px;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            background: #ebf3fe;
             border-radius: 50px;
-            color: #fff;
+            color: #0f172a;
             outline: none;
             transition: 0.3s;
-            font-size: 1rem;
+            font-size: 0.95rem;
+            font-weight: 500;
+            box-sizing: border-box;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.03);
         }
 
         .input-group input::placeholder {
-            color: #64748b;
+            color: #475569;
+            font-weight: 400;
+            opacity: 0.9;
         }
 
         .input-group input:focus {
-            background: rgba(255, 255, 255, 0.25);
-            border-color: rgba(255, 255, 255, 0.5);
-            box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+            background: #ffffff;
+            border-color: #3b82f6;
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.2);
         }
 
         .btn-submit {
-            background: linear-gradient(135deg, #b6cf7bff 0%, #3ea51fff 100%);
+            background: linear-gradient(135deg, #74b834 0%, #2e7d32 100%);
             border: none;
-            padding: 15px;
+            padding: 12px;
             border-radius: 50px;
-            color: #1e293b;
-            font-size: 1.1rem;
+            color: #ffffff;
+            font-size: 1rem;
             font-weight: 700;
             cursor: pointer;
             width: 100%;
             transition: 0.3s;
             text-transform: uppercase;
             letter-spacing: 1px;
-            margin-top: 10px;
-            box-shadow: 0 5px 15px rgba(0, 242, 254, 0.3);
-
+            margin-top: 6px;
+            box-shadow: 0 4px 12px rgba(46, 125, 50, 0.3);
         }
 
         .btn-submit:hover {
-            background: linear-gradient(135deg, #436d5bff 0%, #1896d1ff 100%);
-            transform: translateY(-3px);
-            box-shadow: 0 10px 20px rgba(0, 242, 254, 0.4);
+            background: linear-gradient(135deg, #5c9e24 0%, #1b5e20 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(46, 125, 50, 0.4);
         }
 
         .divider {
             display: flex;
             align-items: center;
             text-align: center;
-            margin: 20px 0;
-            color: rgba(255, 255, 255, 0.7);
-            font-size: 0.9rem;
+            margin: 12px 0;
+            color: rgba(255, 255, 255, 0.85);
+            font-size: 0.82rem;
         }
 
         .divider::before,
         .divider::after {
             content: '';
             flex: 1;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.25);
         }
 
         .divider:not(:empty)::before {
@@ -504,10 +544,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         .btn-google {
             background: #fff;
             border: none;
-            padding: 12px;
+            padding: 10px;
             border-radius: 50px;
             color: #333;
-            font-size: 1rem;
+            font-size: 0.92rem;
             font-weight: 600;
             cursor: pointer;
             width: 100%;
@@ -522,20 +562,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         .btn-google:hover {
             background: #f8f9fa;
-            transform: translateY(-3px);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
         }
 
         .btn-google img.google-icon {
-            width: 22px;
-            height: 22px;
+            width: 20px;
+            height: 20px;
         }
 
-
         .toggle-text {
-            margin-top: 20px;
+            margin-top: 12px;
             color: rgba(255, 255, 255, 0.9);
-            font-size: 0.9rem;
+            font-size: 0.85rem;
         }
 
         .toggle-text a {
@@ -550,11 +589,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
 
         .alert {
-            padding: 10px;
+            padding: 8px 12px;
             border-radius: 10px;
-            margin-bottom: 20px;
+            margin-bottom: 12px;
             color: #fff;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
         }
 
         .alert-success {
@@ -575,14 +614,116 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         /* Password Toggle */
         .input-group i.password-toggle {
             left: auto;
-            right: 20px;
+            right: 18px;
             cursor: pointer;
             pointer-events: auto;
+            color: #475569;
             transition: color 0.2s;
         }
 
         .input-group i.password-toggle:hover {
-            color: #3b82f6 !important;
+            color: #1d4ed8 !important;
+        }
+
+        .match-status {
+            font-size: 0.76rem;
+            margin-top: -6px;
+            margin-bottom: 8px;
+            text-align: left;
+            padding-left: 12px;
+            font-weight: 600;
+            transition: color 0.2s;
+            display: none;
+        }
+
+        .match-status.valid {
+            display: block;
+            color: #2ecc71;
+        }
+
+        .match-status.invalid {
+            display: block;
+            color: #ff6b6b;
+        }
+
+        /* Password Strength Meter */
+        .password-strength-meter {
+            margin-top: -6px;
+            margin-bottom: 16px;
+            text-align: left;
+            padding: 4px 6px;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.15);
+            backdrop-filter: blur(5px);
+        }
+
+        .strength-bars {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 6px;
+            margin-top: 4px;
+        }
+
+        .strength-bars .bar {
+            height: 6px;
+            flex: 1;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .strength-status {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 6px;
+        }
+
+        .strength-text strong {
+            font-weight: 700;
+            transition: color 0.3s ease;
+        }
+
+        .strength-requirements {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4px 8px;
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .strength-requirements li {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: color 0.3s ease;
+        }
+
+        .strength-requirements li i {
+            font-size: 0.7rem;
+            transition: color 0.3s ease, transform 0.2s ease;
+        }
+
+        .strength-requirements li.valid {
+            color: #2ecc71;
+            font-weight: 600;
+        }
+
+        .strength-requirements li.valid i {
+            color: #2ecc71;
+        }
+
+        .strength-requirements li.invalid {
+            color: rgba(255, 255, 255, 0.65);
+        }
+
+        .strength-requirements li.invalid i {
+            color: rgba(255, 255, 255, 0.4);
         }
 
         /* Snowfall Effect */
@@ -616,6 +757,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 </head>
 
 <body>
+    <!-- Video Background -->
+    <video autoplay loop muted playsinline class="bg-video">
+        <source src="mai-nha-xanh.mp4" type="video/mp4">
+    </video>
+    <div class="bg-overlay"></div>
+
     <div id="snow-container"></div>
     <div class="shape"></div>
     <div class="shape"></div>
@@ -635,8 +782,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         <!-- LOGIN FORM -->
         <div id="login-form" class="<?php echo (!empty($showRegisterForm) && $showRegisterForm) ? 'hidden' : ''; ?>" >
-            <div class="form-header"style="height:1px !important;">
-            </div>
             <form method="POST" action="">
                 <input type="hidden" name="action" value="login">
                 <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token'] ?? ''; ?>">
@@ -649,9 +794,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     <input type="password" name="password" id="password" placeholder="Mật khẩu" required>
                     <i class="fas fa-eye password-toggle" id="togglePassword"></i>
                 </div>
-                <div style="text-align: right; margin-bottom: 20px;">
+                <div style="text-align: right; margin-bottom: 12px;">
                     <a href="auth-password-forgot.php"
-                        style="color: #fff; font-size: 0.9rem; text-decoration: none; opacity: 0.9;">Quên mật khẩu?</a>
+                        style="color: #fff; font-size: 0.85rem; text-decoration: none; opacity: 0.9;">Quên mật khẩu?</a>
                 </div>
                 <button type="submit" class="btn-submit">Đăng Nhập</button>
 
@@ -696,11 +841,35 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     <input type="email" name="reg_email" placeholder="Email"
                         value="<?php echo htmlspecialchars($_POST['reg_email'] ?? ''); ?>" required>
                 </div>
-                <div class="input-group">
+                <div class="input-group" style="margin-bottom: 8px;">
                     <i class="fas fa-lock"></i>
                     <input type="password" name="reg_password" id="reg_password" placeholder="Mật khẩu" required>
                     <i class="fas fa-eye password-toggle" id="toggleRegPassword"></i>
                 </div>
+                <!-- Password Strength Meter -->
+                <div class="password-strength-meter" id="meter-reg_password">
+                    <div class="strength-bars">
+                        <div class="bar" id="bar-reg_password-1"></div>
+                        <div class="bar" id="bar-reg_password-2"></div>
+                        <div class="bar" id="bar-reg_password-3"></div>
+                        <div class="bar" id="bar-reg_password-4"></div>
+                    </div>
+                    <div class="strength-status">
+                        <span class="strength-text">Mức độ: <strong id="status-reg_password" style="color: #cbd5e1;">Chưa nhập</strong></span>
+                    </div>
+                    <ul class="strength-requirements">
+                        <li id="req-reg_password-len" class="invalid"><i class="fas fa-circle"></i> Tối thiểu 8 ký tự</li>
+                        <li id="req-reg_password-upper" class="invalid"><i class="fas fa-circle"></i> Có chữ hoa (A-Z)</li>
+                        <li id="req-reg_password-num" class="invalid"><i class="fas fa-circle"></i> Có chữ số (0-9)</li>
+                        <li id="req-reg_password-special" class="invalid"><i class="fas fa-circle"></i> Ký tự đặc biệt</li>
+                    </ul>
+                </div>
+                <div class="input-group" style="margin-bottom: 8px;">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" name="reg_password_confirm" id="reg_password_confirm" placeholder="Nhập lại mật khẩu" required>
+                    <i class="fas fa-eye password-toggle" id="toggleRegPasswordConfirm"></i>
+                </div>
+                <div id="match-status-reg" class="match-status"></div>
                 <button type="submit" class="btn-submit">Đăng Ký</button>
             </form>
             <p class="toggle-text">Đã có tài khoản? <a onclick="toggleForm()">Đăng Nhập</a></p>
@@ -746,6 +915,156 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         setupPasswordToggle('password', 'togglePassword');
         setupPasswordToggle('reg_password', 'toggleRegPassword');
+        setupPasswordToggle('reg_password_confirm', 'toggleRegPasswordConfirm');
+
+        // Password Strength Meter Logic
+        function setupPasswordStrength(inputId) {
+            const input = document.getElementById(inputId);
+            if (!input) return;
+
+            const bars = [
+                document.getElementById(`bar-${inputId}-1`),
+                document.getElementById(`bar-${inputId}-2`),
+                document.getElementById(`bar-${inputId}-3`),
+                document.getElementById(`bar-${inputId}-4`)
+            ];
+            const statusEl = document.getElementById(`status-${inputId}`);
+            const reqLen = document.getElementById(`req-${inputId}-len`);
+            const reqUpper = document.getElementById(`req-${inputId}-upper`);
+            const reqNum = document.getElementById(`req-${inputId}-num`);
+            const reqSpecial = document.getElementById(`req-${inputId}-special`);
+
+            function updateReq(el, isValid) {
+                if (!el) return;
+                const icon = el.querySelector('i');
+                if (isValid) {
+                    el.className = 'valid';
+                    if (icon) icon.className = 'fas fa-check-circle';
+                } else {
+                    el.className = 'invalid';
+                    if (icon) icon.className = 'fas fa-circle';
+                }
+            }
+
+            input.addEventListener('input', function () {
+                const val = input.value;
+
+                const isLenValid = val.length >= 8;
+                const isUpperValid = /[A-Z]/.test(val);
+                const isNumValid = /[0-9]/.test(val);
+                const isSpecialValid = /[^A-Za-z0-9]/.test(val);
+
+                updateReq(reqLen, isLenValid);
+                updateReq(reqUpper, isUpperValid);
+                updateReq(reqNum, isNumValid);
+                updateReq(reqSpecial, isSpecialValid);
+
+                let score = 0;
+                if (isLenValid) score++;
+                if (isUpperValid) score++;
+                if (isNumValid) score++;
+                if (isSpecialValid) score++;
+
+                if (val.length === 0) {
+                    score = 0;
+                }
+
+                const colors = [
+                    'rgba(255, 255, 255, 0.2)', // 0: None
+                    '#e74c3c',                 // 1: Tệ (Red)
+                    '#f39c12',                 // 2: Trung bình (Orange)
+                    '#2ecc71',                 // 3: Tốt (Green)
+                    '#00e676'                  // 4: Rất tốt (Bright Green)
+                ];
+
+                const labels = [
+                    { text: 'Chưa nhập', color: '#cbd5e1' },
+                    { text: 'Tệ', color: '#ff6b6b' },
+                    { text: 'Trung bình', color: '#f39c12' },
+                    { text: 'Tốt', color: '#2ecc71' },
+                    { text: 'Rất tốt', color: '#00e676' }
+                ];
+
+                // Update 4 bars
+                bars.forEach((bar, idx) => {
+                    if (bar) {
+                        if (idx < score) {
+                            bar.style.backgroundColor = colors[score];
+                            bar.style.boxShadow = `0 0 8px ${colors[score]}88`;
+                        } else {
+                            bar.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+                            bar.style.boxShadow = 'none';
+                        }
+                    }
+                });
+
+                // Update text status
+                if (statusEl) {
+                    statusEl.textContent = labels[score].text;
+                    statusEl.style.color = labels[score].color;
+                }
+
+                checkMatch();
+            });
+        }
+
+        const regPwdInput = document.getElementById('reg_password');
+        const regPwdConfirmInput = document.getElementById('reg_password_confirm');
+        const matchStatusReg = document.getElementById('match-status-reg');
+
+        function checkMatch() {
+            if (!regPwdConfirmInput || !matchStatusReg) return;
+            const val1 = regPwdInput ? regPwdInput.value : '';
+            const val2 = regPwdConfirmInput.value;
+
+            if (val2.length === 0) {
+                matchStatusReg.className = 'match-status';
+                matchStatusReg.textContent = '';
+                return;
+            }
+
+            if (val1 === val2) {
+                matchStatusReg.className = 'match-status valid';
+                matchStatusReg.innerHTML = '<i class="fas fa-check-circle"></i> Mật khẩu trùng khớp';
+            } else {
+                matchStatusReg.className = 'match-status invalid';
+                matchStatusReg.innerHTML = '<i class="fas fa-times-circle"></i> Mật khẩu không trùng khớp!';
+            }
+        }
+
+        if (regPwdConfirmInput) {
+            regPwdConfirmInput.addEventListener('input', checkMatch);
+        }
+
+        setupPasswordStrength('reg_password');
+
+        // Prevent registration submission if password criteria are not fully met or passwords do not match
+        const regFormElement = document.querySelector('#register-form form');
+        if (regFormElement) {
+            regFormElement.addEventListener('submit', function (e) {
+                if (regPwdInput && regPwdConfirmInput) {
+                    const val = regPwdInput.value;
+                    const confirmVal = regPwdConfirmInput.value;
+
+                    const isLenValid = val.length >= 8;
+                    const isUpperValid = /[A-Z]/.test(val);
+                    const isNumValid = /[0-9]/.test(val);
+                    const isSpecialValid = /[^A-Za-z0-9]/.test(val);
+
+                    if (!isLenValid || !isUpperValid || !isNumValid || !isSpecialValid) {
+                        e.preventDefault();
+                        alert('Mật khẩu chưa đủ điều kiện! Bắt buộc tối thiểu 8 ký tự, gồm chữ hoa, chữ số và ký tự đặc biệt.');
+                        return;
+                    }
+
+                    if (val !== confirmVal) {
+                        e.preventDefault();
+                        alert('Mật khẩu nhập lại không trùng khớp! Vui lòng kiểm tra lại.');
+                        return;
+                    }
+                }
+            });
+        }
 
         // Countdown logic for login lockout
         const alertEl = document.getElementById('login-alert');

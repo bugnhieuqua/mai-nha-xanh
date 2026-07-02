@@ -4,6 +4,23 @@
  * Chatbot dành riêng cho admin - trích xuất dữ liệu & quản lý bài đăng bằng ngôn ngữ tự nhiên.
  * Hỗ trợ đa provider AI (Groq, OpenAI, DeepSeek, Gemini) với cơ chế fallback.
  */
+
+// Xử lý CORS khi Frontend & Backend ở domain khác nhau (Render / Hosting)
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '*';
+if ($origin !== '*') {
+    header("Access-Control-Allow-Origin: $origin");
+    header("Access-Control-Allow-Credentials: true");
+} else {
+    header("Access-Control-Allow-Origin: *");
+}
+header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, X-CSRF-Token");
+header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
+
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit;
+}
+
 header('Content-Type: application/json; charset=utf-8');
 
 require_once '../config/database.php';
@@ -18,7 +35,12 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-$input = json_decode(file_get_contents('php://input'), true);
+$rawInput = file_get_contents('php://input');
+$input = json_decode($rawInput, true);
+if (!$input && !empty($_POST)) {
+    $input = $_POST;
+}
+
 if (!$input || !isset($input['message'])) {
     echo json_encode(['success' => false, 'message' => 'Thiếu nội dung tin nhắn']);
     exit;
@@ -261,14 +283,17 @@ Khi admin yêu cầu thực hiện hành động với bài đăng, hãy phân t
 <ACTION>{"action": "get_stats"}</ACTION>
 <ACTION>{"action": "get_user_stats"}</ACTION>
 <ACTION>{"action": "get_post", "id": 123}</ACTION>
+<ACTION>{"action": "export_excel", "type": "posters"}</ACTION>
+<ACTION>{"action": "export_excel", "type": "posts", "status": "tu_choi"}</ACTION>
+<ACTION>{"action": "export_excel", "type": "posts", "status": "cho_duyet"}</ACTION>
+<ACTION>{"action": "export_excel", "type": "posts", "status": "da_duyet"}</ACTION>
+<ACTION>{"action": "export_excel", "type": "posts", "status": "all"}</ACTION>
+<ACTION>{"action": "export_excel", "type": "users"}</ACTION>
 
-**QUY TẮC QUAN TRỌNG:**
-- Hành động approve/reject/delete: Luôn mô tả rõ bài nào, trạng thái gì trước khi thực hiện
-- Trả lời bằng tiếng Việt, thân thiện và chuyên nghiệp
-- Khi cần lấy thêm dữ liệu (ví dụ: tìm ID bài) hãy dùng action get/search trước
-- Với hành động xóa: cảnh báo rõ đây là hành động không thể khôi phục
-- Format danh sách bài đăng dưới dạng có cấu trúc, dễ đọc
-- Nếu admin nói muốn duyệt/từ chối/xóa mà KHÔNG nêu ID cụ thể, hãy hỏi lại ID hoặc dùng action search để tìm
+**QUY TẮC PHẢN HỒI NGUYÊN TẮC (CRITICAL):**
+1. **MỌI TRUY VẤN, TRA CỨU, THỐNG KÊ, XUẤT EXCEL**: Trả lời ngay lập tức một cách thuần thục, mượt mà, tự nhiên và ĐÍNH KÈM THẺ `<ACTION>` tương ứng ngay trong phản hồi. KHÔNG BAO GIỜ bắt người dùng xác nhận, KHÔNG hỏi đi hỏi lại.
+2. **XÁC NHẬN CÓ ĐIỀU KIỆN (CONFIRMATION)**: CHỈ ÁP DỤNG khi thực hiện hành động THAY ĐỔI hoặc XÓA DỮ LIỆU (như Duyệt bài `approve`, Từ chối `reject`, Xóa bài `delete`).
+3. **TUYỆT ĐỐI KHÔNG TIẾT LỘ TÊN HÀM/MÃ KỸ THUẬT**: KHÔNG BAO GIỜ in ra các cụm từ như `get_user_stats`, `get_pending`, `export_excel`, `ACTION` hay tên biến hệ thống trong câu trả lời cho Admin. Trả lời bằng tiếng Việt tự nhiên, lịch sự.
 PROMPT;
 
 // ── Build messages cho AI ────────────────────────────────────────────────────
@@ -549,6 +574,61 @@ if (preg_match_all('/<ACTION>(.*?)<\/ACTION>/s', $aiText, $matches)) {
                     $result = ['type' => 'action_result', 'action' => 'delete', 'result' => $r];
                 }
                 break;
+
+            case 'export_excel':
+                $expType = $actionData['type'] ?? 'posts';
+                $expStatus = $actionData['status'] ?? '';
+                $expKw = $actionData['keyword'] ?? '';
+
+                $count = 0;
+                $title = '';
+                $url = '../api/admin_export_excel.php?type=' . urlencode($expType);
+
+                if ($expType === 'posters') {
+                    $title = 'Danh sách người đăng bài';
+                    $stmt = $db->query("SELECT COUNT(DISTINCT nguoidang) FROM dangbai_chothuetro");
+                    $count = (int)$stmt->fetchColumn();
+                } elseif ($expType === 'users') {
+                    $title = 'Danh sách tài khoản người dùng';
+                    $stmt = $db->query("SELECT COUNT(*) FROM users");
+                    $count = (int)$stmt->fetchColumn();
+                } else {
+                    $where = '1=1';
+                    $p = [];
+                    if ($expStatus && in_array($expStatus, ['cho_duyet', 'da_duyet', 'tu_choi'])) {
+                        $where .= " AND trangthai = :st";
+                        $p[':st'] = $expStatus;
+                        $url .= '&status=' . urlencode($expStatus);
+                    }
+                    if ($expKw) {
+                        $where .= " AND (tieude LIKE :kw OR diachi LIKE :kw2 OR nguoidang LIKE :kw3)";
+                        $p[':kw'] = "%$expKw%";
+                        $p[':kw2'] = "%$expKw%";
+                        $p[':kw3'] = "%$expKw%";
+                        $url .= '&keyword=' . urlencode($expKw);
+                    }
+
+                    $titleMap = [
+                        'cho_duyet' => 'Bài đăng chờ duyệt',
+                        'tu_choi'   => 'Bài đăng bị từ chối / hủy',
+                        'da_duyet'  => 'Bài đăng đã duyệt',
+                    ];
+                    $title = $titleMap[$expStatus] ?? ($expKw ? "Kết quả tìm kiếm: \"$expKw\"" : 'Tất cả bài đăng');
+
+                    $stmt = $db->prepare("SELECT COUNT(*) FROM dangbai_chothuetro WHERE $where");
+                    $stmt->execute($p);
+                    $count = (int)$stmt->fetchColumn();
+                }
+
+                $result = [
+                    'type' => 'excel_export',
+                    'label' => 'Xuất File Excel',
+                    'title' => $title,
+                    'export_type' => $expType,
+                    'count' => $count,
+                    'download_url' => $url
+                ];
+                break;
         }
         
         if ($result) {
@@ -558,6 +638,9 @@ if (preg_match_all('/<ACTION>(.*?)<\/ACTION>/s', $aiText, $matches)) {
     
     // Xóa các ACTION tags khỏi text hiển thị
     $cleanText = preg_replace('/<ACTION>.*?<\/ACTION>/s', '', $aiText);
+    // Xóa các thuật ngữ mã hàm kỹ thuật nếu AI lỡ ghi vào text
+    $cleanText = preg_replace('/(?:thực hiện hành động|hành động)\s+`?[a_z0-9_]+`?/ui', '', $cleanText);
+    $cleanText = preg_replace('/`?(?:get_user_stats|get_pending|get_all|get_stats|export_excel|get_post)`?/ui', '', $cleanText);
     $cleanText = trim($cleanText);
 }
 
@@ -575,6 +658,23 @@ echo json_encode([
  */
 function offlineFallback(string $message, PDO $db): string {
     $msg = mb_strtolower(trim($message));
+
+    // Xuất excel offline fallback
+    if (strpos($msg, 'excel') !== false || strpos($msg, 'xuất') !== false) {
+        if (strpos($msg, 'người đăng') !== false || strpos($msg, 'poster') !== false) {
+            return 'Tôi đã khởi tạo yêu cầu xuất File Excel tổng hợp người đăng bài. Bạn có thể bấm nút Tải xuống ở trên.<ACTION>{"action": "export_excel", "type": "posters"}</ACTION>';
+        }
+        if (strpos($msg, 'từ chối') !== false || strpos($msg, 'hủy') !== false || strpos($msg, 'tu choi') !== false) {
+            return 'Tôi đã tạo xong yêu cầu xuất File Excel các bài đăng bị từ chối/hủy. Bạn có thể bấm nút Tải xuống dưới đây.<ACTION>{"action": "export_excel", "type": "posts", "status": "tu_choi"}</ACTION>';
+        }
+        if (strpos($msg, 'chờ duyệt') !== false) {
+            return 'Tôi đã khởi tạo file Excel danh sách các bài đăng chờ duyệt. Vui lòng bấm Tải xuống.<ACTION>{"action": "export_excel", "type": "posts", "status": "cho_duyet"}</ACTION>';
+        }
+        if (strpos($msg, 'người dùng') !== false || strpos($msg, 'user') !== false) {
+            return 'Tôi đã khởi tạo file Excel danh sách tài khoản người dùng.<ACTION>{"action": "export_excel", "type": "users"}</ACTION>';
+        }
+        return 'Tôi đã khởi tạo file Excel toàn bộ dữ liệu bài đăng phòng trọ.<ACTION>{"action": "export_excel", "type": "posts", "status": "all"}</ACTION>';
+    }
     
     if (strpos($msg, 'chờ duyệt') !== false || strpos($msg, 'pending') !== false) {
         $posts = getPendingPosts($db, 10);
@@ -602,5 +702,5 @@ function offlineFallback(string $message, PDO $db): string {
         return "Hôm nay có {$s['today']} bài đăng mới.";
     }
     
-    return "Xin lỗi, tôi không hiểu yêu cầu của bạn. Vui lòng thử lại với lệnh rõ ràng hơn.";
+    return "Xin lỗi, tôi chưa hiểu rõ lệnh của bạn. Bạn có thể thử các câu hỏi như: \"Xuất excel tổng hợp người đăng bài\", \"Xuất excel bài bị hủy\", \"Xuất excel bài chờ duyệt\".";
 }

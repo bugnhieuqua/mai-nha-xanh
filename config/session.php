@@ -3,8 +3,10 @@ date_default_timezone_set('Asia/Ho_Chi_Minh');
 
 if (php_sapi_name() !== 'cli') {
     if (session_status() == PHP_SESSION_NONE) {
-        // Tự động phát hiện HTTPS
-        $is_secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (!empty($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443);
+        // Tự động phát hiện HTTPS (bao gồm cả Proxy/Render/Cloudflare)
+        $is_secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') 
+            || (!empty($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443)
+            || (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
 
         ini_set('session.cookie_lifetime', 0);
         session_set_cookie_params([
@@ -13,7 +15,7 @@ if (php_sapi_name() !== 'cli') {
             'domain' => '',
             'secure' => $is_secure,
             'httponly' => true,
-            'samesite' => 'Lax'
+            'samesite' => $is_secure ? 'None' : 'Lax'
         ]);
         session_start();
     }
@@ -28,6 +30,17 @@ if (php_sapi_name() !== 'cli') {
             // Nếu Fingerprint thay đổi (nghi ngờ bị chiếm quyền), hủy session và đăng xuất
             session_unset();
             session_destroy();
+            
+            $is_ajax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') 
+                       || (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false)
+                       || (isset($_SERVER['CONTENT_TYPE']) && strpos($_SERVER['CONTENT_TYPE'], 'application/json') !== false);
+            if ($is_ajax) {
+                http_response_code(401);
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'message' => 'Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại.']);
+                exit;
+            }
+
             header("Location: " . ((strpos($_SERVER['SCRIPT_NAME'] ?? '', '/admin/') !== false) ? '../' : '') . "login.php?error=session_expired");
             exit;
         }
@@ -96,16 +109,31 @@ if (isset($_SESSION['user_id']) && !array_key_exists('avatar', $_SESSION)) {
 
 function requireLogin($role = null) {
     // Tự động kiểm tra nếu đang ở trong thư mục con admin/ để có đường dẫn về đúng
-    $is_admin_folder = (strpos($_SERVER['SCRIPT_NAME'], '/admin/') !== false);
+    $is_admin_folder = (strpos($_SERVER['SCRIPT_NAME'] ?? '', '/admin/') !== false);
     $prefix = $is_admin_folder ? '../' : '';
 
+    $is_ajax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') 
+               || (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false)
+               || (isset($_SERVER['CONTENT_TYPE']) && strpos($_SERVER['CONTENT_TYPE'], 'application/json') !== false);
+
     if (!isset($_SESSION['user_id'])) {
+        if ($is_ajax) {
+            http_response_code(401);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'message' => 'Phiên làm việc đã hết hạn hoặc chưa đăng nhập. Vui lòng đăng nhập lại.']);
+            exit();
+        }
         header("Location: {$prefix}login.php");
         exit();
     }
     
     if ($role && (!isset($_SESSION['role']) || $_SESSION['role'] !== $role)) {
-        // Redirect or show error for unauthorized access
+        if ($is_ajax) {
+            http_response_code(403);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'message' => 'Bạn không có quyền admin để truy cập dữ liệu này.']);
+            exit();
+        }
         header("Location: {$prefix}index.php");
         exit();
     }
