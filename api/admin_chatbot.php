@@ -585,7 +585,7 @@ if (preg_match_all('/<ACTION>(.*?)<\/ACTION>/s', $aiText, $matches)) {
 
                 $count = 0;
                 $title = '';
-                $url = '../api/admin_export_excel.php?type=' . urlencode($expType);
+                $url = '../api/excel_export.php?type=' . urlencode($expType);
 
                 if ($expType === 'posters') {
                     $title = 'Danh sách người đăng bài';

@@ -44,26 +44,51 @@ switch ($type) {
 function exportPosters(PDO $db, string $dateStr) {
     $filename = "danh_sach_nguoi_dang_bai_{$dateStr}.xls";
 
-    $sql = "
-        SELECT 
-            d.nguoidang as username,
-            u.hoten,
-            u.email,
-            u.sdt,
-            COUNT(*) as total_posts,
-            SUM(CASE WHEN d.trangthai = 'da_duyet' THEN 1 ELSE 0 END) as approved_posts,
-            SUM(CASE WHEN d.trangthai = 'cho_duyet' THEN 1 ELSE 0 END) as pending_posts,
-            SUM(CASE WHEN d.trangthai = 'tu_choi' THEN 1 ELSE 0 END) as rejected_posts,
-            AVG(d.gia) as avg_price,
-            MAX(d.ngaydang) as latest_post
-        FROM dangbai_chothuetro d
-        LEFT JOIN users u ON d.nguoidang = u.username
-        GROUP BY d.nguoidang
-        ORDER BY total_posts DESC
-    ";
-    
-    $stmt = $db->query($sql);
-    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $rows = [];
+    try {
+        $sql = "
+            SELECT 
+                d.nguoidang as username,
+                MAX(u.hoten) as hoten,
+                MAX(u.email) as email,
+                MAX(d.sdt_chunha) as sdt,
+                COUNT(*) as total_posts,
+                SUM(CASE WHEN d.trangthai = 'da_duyet' THEN 1 ELSE 0 END) as approved_posts,
+                SUM(CASE WHEN d.trangthai = 'cho_duyet' THEN 1 ELSE 0 END) as pending_posts,
+                SUM(CASE WHEN d.trangthai = 'tu_choi' THEN 1 ELSE 0 END) as rejected_posts,
+                AVG(d.gia) as avg_price,
+                MAX(d.ngaydang) as latest_post
+            FROM dangbai_chothuetro d
+            LEFT JOIN users u ON d.nguoidang = u.username
+            GROUP BY d.nguoidang
+            ORDER BY total_posts DESC
+        ";
+        $stmt = $db->query($sql);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        try {
+            $sql = "
+                SELECT 
+                    nguoidang as username,
+                    '' as hoten,
+                    '' as email,
+                    MAX(sdt_chunha) as sdt,
+                    COUNT(*) as total_posts,
+                    SUM(CASE WHEN trangthai = 'da_duyet' THEN 1 ELSE 0 END) as approved_posts,
+                    SUM(CASE WHEN trangthai = 'cho_duyet' THEN 1 ELSE 0 END) as pending_posts,
+                    SUM(CASE WHEN trangthai = 'tu_choi' THEN 1 ELSE 0 END) as rejected_posts,
+                    AVG(gia) as avg_price,
+                    MAX(ngaydang) as latest_post
+                FROM dangbai_chothuetro
+                GROUP BY nguoidang
+                ORDER BY total_posts DESC
+            ";
+            $stmt = $db->query($sql);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e2) {
+            $rows = [];
+        }
+    }
 
     sendExcelHeaders($filename);
 
@@ -95,12 +120,12 @@ function exportPosters(PDO $db, string $dateStr) {
         echo "<td>" . htmlspecialchars($r['hoten'] ?? 'Chưa cập nhật') . "</td>";
         echo "<td>" . htmlspecialchars($r['email'] ?? 'Chưa có') . "</td>";
         echo "<td>" . htmlspecialchars($r['sdt'] ?? 'Chưa có') . "</td>";
-        echo "<td align='center'><b>" . number_format($r['total_posts']) . "</b></td>";
-        echo "<td align='center' style='color:#10b981;'>" . number_format($r['approved_posts']) . "</td>";
-        echo "<td align='center' style='color:#f59e0b;'>" . number_format($r['pending_posts']) . "</td>";
-        echo "<td align='center' style='color:#ef4444;'>" . number_format($r['rejected_posts']) . "</td>";
+        echo "<td align='center'><b>" . number_format($r['total_posts'] ?? 0) . "</b></td>";
+        echo "<td align='center' style='color:#10b981;'>" . number_format($r['approved_posts'] ?? 0) . "</td>";
+        echo "<td align='center' style='color:#f59e0b;'>" . number_format($r['pending_posts'] ?? 0) . "</td>";
+        echo "<td align='center' style='color:#ef4444;'>" . number_format($r['rejected_posts'] ?? 0) . "</td>";
         echo "<td align='right'>" . number_format($r['avg_price'] ?? 0) . " ₫</td>";
-        echo "<td align='center'>" . ($r['latest_post'] ? date('d/m/Y H:i', strtotime($r['latest_post'])) : '—') . "</td>";
+        echo "<td align='center'>" . (!empty($r['latest_post']) ? date('d/m/Y H:i', strtotime($r['latest_post'])) : '—') . "</td>";
         echo "</tr>";
         $stt++;
     }
@@ -146,27 +171,32 @@ function exportPosts(PDO $db, string $dateStr, string $status = '', string $keyw
 
     $filename = "danh_sach_bai_dang_{$statusLabel}_{$dateStr}.xls";
 
-    $sql = "
-        SELECT 
-            d.id,
-            d.tieude,
-            d.diachi,
-            d.gia,
-            d.dientich,
-            d.nguoidang,
-            d.sdt_chunha,
-            d.trangthai,
-            d.admin_note,
-            d.ngaydang,
-            d.duyet_luc
-        FROM dangbai_chothuetro d
-        WHERE {$where}
-        ORDER BY d.ngaydang DESC
-    ";
+    $rows = [];
+    try {
+        $sql = "
+            SELECT 
+                d.id,
+                d.tieude,
+                d.diachi,
+                d.gia,
+                d.dientich,
+                d.nguoidang,
+                d.sdt_chunha,
+                d.trangthai,
+                d.admin_note,
+                d.ngaydang,
+                d.duyet_luc
+            FROM dangbai_chothuetro d
+            WHERE {$where}
+            ORDER BY d.ngaydang DESC
+        ";
 
-    $stmt = $db->prepare($sql);
-    $stmt->execute($params);
-    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        $rows = [];
+    }
 
     sendExcelHeaders($filename);
 
@@ -202,26 +232,26 @@ function exportPosts(PDO $db, string $dateStr, string $status = '', string $keyw
     foreach ($rows as $r) {
         $bg = ($stt % 2 == 0) ? "#f8fafc" : "#ffffff";
         
-        $sttBadge = match($r['trangthai']) {
+        $sttBadge = match($r['trangthai'] ?? '') {
             'cho_duyet' => "<span style='color:#d97706; font-weight:bold;'>Chờ duyệt</span>",
             'da_duyet'  => "<span style='color:#059669; font-weight:bold;'>Đã duyệt</span>",
             'tu_choi'   => "<span style='color:#dc2626; font-weight:bold;'>Bị từ chối / Hủy</span>",
-            default     => htmlspecialchars($r['trangthai'])
+            default     => htmlspecialchars($r['trangthai'] ?? '')
         };
 
         echo "<tr style='background-color: {$bg};'>";
         echo "<td align='center'>{$stt}</td>";
-        echo "<td align='center'><b>#{$r['id']}</b></td>";
-        echo "<td>" . htmlspecialchars($r['tieude']) . "</td>";
+        echo "<td align='center'><b>#" . ($r['id'] ?? '') . "</b></td>";
+        echo "<td>" . htmlspecialchars($r['tieude'] ?? '') . "</td>";
         echo "<td align='center'>{$sttBadge}</td>";
-        echo "<td>" . htmlspecialchars($r['nguoidang']) . "</td>";
-        echo "<td>" . htmlspecialchars($r['sdt_chunha'] ?: '—') . "</td>";
-        echo "<td align='right'>" . number_format($r['gia']) . " ₫</td>";
-        echo "<td align='center'>" . ($r['dientich'] ? number_format($r['dientich'], 1) . " m²" : '—') . "</td>";
-        echo "<td>" . htmlspecialchars($r['diachi']) . "</td>";
-        echo "<td style='color:#dc2626;'>" . htmlspecialchars($r['admin_note'] ?: '—') . "</td>";
-        echo "<td align='center'>" . ($r['ngaydang'] ? date('d/m/Y H:i', strtotime($r['ngaydang'])) : '—') . "</td>";
-        echo "<td align='center'>" . ($r['duyet_luc'] ? date('d/m/Y H:i', strtotime($r['duyet_luc'])) : '—') . "</td>";
+        echo "<td>" . htmlspecialchars($r['nguoidang'] ?? '') . "</td>";
+        echo "<td>" . htmlspecialchars($r['sdt_chunha'] ?? '—') . "</td>";
+        echo "<td align='right'>" . number_format($r['gia'] ?? 0) . " ₫</td>";
+        echo "<td align='center'>" . (!empty($r['dientich']) ? number_format($r['dientich'], 1) . " m²" : '—') . "</td>";
+        echo "<td>" . htmlspecialchars($r['diachi'] ?? '') . "</td>";
+        echo "<td style='color:#dc2626;'>" . htmlspecialchars($r['admin_note'] ?? '—') . "</td>";
+        echo "<td align='center'>" . (!empty($r['ngaydang']) ? date('d/m/Y H:i', strtotime($r['ngaydang'])) : '—') . "</td>";
+        echo "<td align='center'>" . (!empty($r['duyet_luc']) ? date('d/m/Y H:i', strtotime($r['duyet_luc'])) : '—') . "</td>";
         echo "</tr>";
         $stt++;
     }
@@ -236,22 +266,32 @@ function exportPosts(PDO $db, string $dateStr, string $status = '', string $keyw
 function exportUsers(PDO $db, string $dateStr) {
     $filename = "danh_sach_nguoi_dung_{$dateStr}.xls";
 
-    $sql = "
-        SELECT 
-            u.id,
-            u.username,
-            u.hoten,
-            u.email,
-            u.role,
-            u.status,
-            u.created_at,
-            (SELECT COUNT(*) FROM dangbai_chothuetro WHERE nguoidang = u.username) as post_count
-        FROM users u
-        ORDER BY u.id DESC
-    ";
+    $rows = [];
+    try {
+        $sql = "
+            SELECT 
+                u.id,
+                u.username,
+                u.hoten,
+                u.email,
+                u.role,
+                u.status,
+                u.created_at,
+                (SELECT COUNT(*) FROM dangbai_chothuetro WHERE nguoidang = u.username) as post_count
+            FROM users u
+            ORDER BY u.id DESC
+        ";
 
-    $stmt = $db->query($sql);
-    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $stmt = $db->query($sql);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        try {
+            $stmt = $db->query("SELECT id, username, email FROM users ORDER BY id DESC");
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e2) {
+            $rows = [];
+        }
+    }
 
     sendExcelHeaders($filename);
 
@@ -275,19 +315,19 @@ function exportUsers(PDO $db, string $dateStr) {
     $stt = 1;
     foreach ($rows as $r) {
         $bg = ($stt % 2 == 0) ? "#f8fafc" : "#ffffff";
-        $roleLabel = ($r['role'] === 'admin') ? "<b style='color:#7c3aed;'>Admin</b>" : "Thành viên";
-        $statusLabel = ($r['status'] === 'active' || $r['status'] === '1' || empty($r['status'])) ? "<span style='color:#059669;'>Hoạt động</span>" : "<span style='color:#dc2626;'>Khóa</span>";
+        $roleLabel = (($r['role'] ?? '') === 'admin') ? "<b style='color:#7c3aed;'>Admin</b>" : "Thành viên";
+        $statusLabel = (($r['status'] ?? '') === 'active' || ($r['status'] ?? '') === '1' || empty($r['status'])) ? "<span style='color:#059669;'>Hoạt động</span>" : "<span style='color:#dc2626;'>Khóa</span>";
 
         echo "<tr style='background-color: {$bg};'>";
         echo "<td align='center'>{$stt}</td>";
-        echo "<td align='center'>#{$r['id']}</td>";
-        echo "<td>" . htmlspecialchars($r['username']) . "</td>";
-        echo "<td>" . htmlspecialchars($r['hoten'] ?: 'Chưa cập nhật') . "</td>";
-        echo "<td>" . htmlspecialchars($r['email'] ?: 'Chưa có') . "</td>";
+        echo "<td align='center'>#" . ($r['id'] ?? '') . "</td>";
+        echo "<td>" . htmlspecialchars($r['username'] ?? '') . "</td>";
+        echo "<td>" . htmlspecialchars($r['hoten'] ?? 'Chưa cập nhật') . "</td>";
+        echo "<td>" . htmlspecialchars($r['email'] ?? 'Chưa có') . "</td>";
         echo "<td align='center'>{$roleLabel}</td>";
         echo "<td align='center'>{$statusLabel}</td>";
-        echo "<td align='center'><b>" . number_format($r['post_count']) . "</b></td>";
-        echo "<td align='center'>" . ($r['created_at'] ? date('d/m/Y H:i', strtotime($r['created_at'])) : '—') . "</td>";
+        echo "<td align='center'><b>" . number_format($r['post_count'] ?? 0) . "</b></td>";
+        echo "<td align='center'>" . (!empty($r['created_at']) ? date('d/m/Y H:i', strtotime($r['created_at'])) : '—') . "</td>";
         echo "</tr>";
         $stt++;
     }
@@ -300,7 +340,6 @@ function exportUsers(PDO $db, string $dateStr) {
  * Gửi HTTP headers để trình duyệt tải file Excel .xls với UTF-8 BOM
  */
 function sendExcelHeaders(string $filename) {
-    // Clear buffer
     if (ob_get_level()) ob_end_clean();
 
     header('Content-Type: application/vnd.ms-excel; charset=utf-8');
