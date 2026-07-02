@@ -4,7 +4,7 @@
         <div class="footer-content">
             <div class="footer-section">
                 <h3>Mái Nhà Xanh</h3>
-                <p>Chuyên cho thuê phòng trọ chất lượng, giá cả hợp lý tại TP.Vinh, Nghệ An</p>
+                <p>Nền tảng hỗ trợ kết nối cho thuê Phòng trọ</p>
                 <div class="social-links">
                     <a href="#"><i class="fab fa-facebook"></i></a>
                     <a href="#"><i class="fab fa-youtube"></i></a>
@@ -30,7 +30,7 @@
                     <li><i class="fas fa-phone"></i> 0123 456 789</li>
                     <li><i class="fas fa-envelope"></i> contact@mainhaxanh.com</li>
                     <li><i class="fas fa-map-marker-alt"></i> <a href="https://maps.app.goo.gl/sSY9rKodfubWosh1A"
-                            target="_blank" rel="noopener" class="footer-map-link">Trường Đại học Kinh tế Nghệ An, TP.
+                            target="_blank" rel="noopener" class="footer-map-link">Trường Đại học Nghệ An, TP.
                             Vinh</a></li>
                 </ul>
             </div>

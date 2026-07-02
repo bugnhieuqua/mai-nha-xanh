@@ -157,36 +157,35 @@ function getPostById(PDO $db, int $id): ?array {
 function getUserStats(PDO $db): array {
     $result = ['total' => 0, 'today' => 0, 'top_posters' => []];
     try {
-        // Tổng người dùng
-        $stmt = $db->query("SELECT COUNT(*) as total FROM users");
+        // Tổng người dùng đăng ký trong hệ thống (Loại trừ tài khoản Admin)
+        $stmt = $db->query("SELECT COUNT(*) as total FROM users WHERE role != 'admin' OR role IS NULL");
         $result['total'] = (int)$stmt->fetchColumn();
 
-        // Người dùng đăng ký hôm nay – nếu cột ngaydang không tồn tại sẽ bắt lỗi
+        // Người dùng đăng ký hôm nay (Loại trừ Admin)
         try {
-            $stmt = $db->query("SELECT COUNT(*) as today FROM users WHERE DATE(ngaydang) = CURDATE()");
+            $stmt = $db->query("SELECT COUNT(*) as today FROM users WHERE (role != 'admin' OR role IS NULL) AND DATE(ngaydang) = CURDATE()");
             $result['today'] = (int)$stmt->fetchColumn();
         } catch (PDOException $e) {
-            // Nếu không có cột ngaydang, thử dùng created_at nếu có
             try {
-                $stmt = $db->query("SELECT COUNT(*) as today FROM users WHERE DATE(created_at) = CURDATE()");
+                $stmt = $db->query("SELECT COUNT(*) as today FROM users WHERE (role != 'admin' OR role IS NULL) AND DATE(created_at) = CURDATE()");
                 $result['today'] = (int)$stmt->fetchColumn();
             } catch (PDOException $e2) {
-                // Không có cột ngày, bỏ qua
                 $result['today'] = 0;
             }
         }
 
-        // Top 5 người đăng nhiều bài nhất
+        // Top người đăng bài (Loại trừ Admin, chỉ xếp hạng Thành viên/Chủ nhà)
         $stmt = $db->query("
-            SELECT username, COUNT(*) as post_count 
-            FROM dangbai_chothuetro 
-            GROUP BY nguoidang 
+            SELECT d.nguoidang as username, MAX(u.hoten) as hoten, MAX(u.avatar) as avatar, COUNT(*) as post_count 
+            FROM dangbai_chothuetro d
+            INNER JOIN users u ON d.nguoidang = u.username
+            WHERE u.role != 'admin' OR u.role IS NULL
+            GROUP BY d.nguoidang 
             ORDER BY post_count DESC 
             LIMIT 5
         ");
         $result['top_posters'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
-        // Nếu bảng users chưa tồn tại, trả về mảng rỗng
         error_log("getUserStats PDO Error: " . $e->getMessage());
     }
     return $result;
@@ -593,7 +592,8 @@ if (preg_match_all('/<ACTION>(.*?)<\/ACTION>/s', $aiText, $matches)) {
                     $count = (int)$stmt->fetchColumn();
                 } elseif ($expType === 'users') {
                     $title = 'Danh sách tài khoản người dùng';
-                    $stmt = $db->query("SELECT COUNT(*) FROM users");
+                    // Khớp chính xác với query trong admin_export_excel.php: bỏ qua admin
+                    $stmt = $db->query("SELECT COUNT(*) FROM users WHERE role != 'admin' OR role IS NULL");
                     $count = (int)$stmt->fetchColumn();
                 } else {
                     $where = '1=1';
@@ -625,7 +625,7 @@ if (preg_match_all('/<ACTION>(.*?)<\/ACTION>/s', $aiText, $matches)) {
 
                 $result = [
                     'type' => 'excel_export',
-                    'label' => 'Xuất File Excel',
+                    'label' => 'Xuất File CSV (Excel)',
                     'title' => $title,
                     'export_type' => $expType,
                     'count' => $count,

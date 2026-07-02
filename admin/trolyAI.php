@@ -568,23 +568,23 @@ function buildActionCard(result) {
         </div>`;
     }
 
-    // Excel Export Card
+    // CSV Export Card
     if (result.type === 'excel_export') {
         return `<div class="action-card" style="margin-top:12px; border: 1.5px solid #107c41; border-radius: 14px; overflow: hidden; box-shadow: 0 4px 15px rgba(16,124,65,0.15);">
             <div class="action-card-header" style="background: linear-gradient(135deg, #107c41 0%, #1f9a55 100%); color: #ffffff; padding: 12px 16px; font-weight: 700; font-size: 0.88rem; display: flex; align-items: center; justify-content: space-between;">
-                <span><i class="fas fa-file-excel" style="font-size: 1.1rem; margin-right: 8px;"></i> ${escapeHtml(result.label || 'Xuất File Excel')}</span>
-                <span style="font-size: 0.72rem; background: rgba(255,255,255,0.2); padding: 3px 8px; border-radius: 12px; font-weight: 600;">.XLS (UTF-8)</span>
+                <span><i class="fas fa-file-csv" style="font-size: 1.1rem; margin-right: 8px;"></i> ${escapeHtml(result.label || 'Xuất File CSV (Excel)')}</span>
+                <span style="font-size: 0.72rem; background: rgba(255,255,255,0.2); padding: 3px 8px; border-radius: 12px; font-weight: 600;">.CSV (UTF-8)</span>
             </div>
             <div class="action-card-body" style="padding: 14px 16px; background: #ffffff;">
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
                     <div>
                         <div style="font-weight: 700; font-size: 0.95rem; color: #1e293b; margin-bottom: 2px;">${escapeHtml(result.title)}</div>
-                        <div style="font-size: 0.78rem; color: #64748b;">Dữ liệu sẵn sàng: <strong style="color: #107c41;">${result.count || 0}</strong> mục</div>
+                        <div style="font-size: 0.78rem; color: #64748b;">Dữ liệu sẵn sàng: <strong style="color: #107c41;">${result.count || 0}</strong> mục — Mỗi ô 1 giá trị, mở bằng Excel</div>
                     </div>
                     <div style="font-size: 2.2rem; color: #107c41; opacity: 0.85;"><i class="fas fa-file-csv"></i></div>
                 </div>
                 <a href="${escapeHtml(result.download_url)}" target="_blank" class="post-result-btn" style="display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 11px; background: linear-gradient(135deg, #107c41, #0b5c30); color: #ffffff; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 0.88rem; box-shadow: 0 4px 12px rgba(16,124,65,0.25); transition: all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
-                    <i class="fas fa-download"></i> Tải Xuất File Excel Ngay (${result.count || 0} mục)
+                    <i class="fas fa-download"></i> Tải Xuống File Excel (${result.count || 0} mục)
                 </a>
             </div>
         </div>`;

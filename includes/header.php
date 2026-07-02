@@ -10,7 +10,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title><?php echo isset($page_title) ? $page_title . ' - ' : ''; ?>Mái Nhà Xanh</title>
-    <meta name="description" content="<?php echo isset($page_description) ? htmlspecialchars($page_description) : 'Mái Nhà Xanh - Chuyên cho thuê phòng trọ chất lượng, giá cả hợp lý tại TP.Vinh, Nghệ An. Tìm phòng trọ đẹp, tiện nghi, an toàn.'; ?>">
+    <meta name="description" content="<?php echo isset($page_description) ? htmlspecialchars($page_description) : 'Mái Nhà Xanh - Nền tảng hỗ trợ kết nối cho thuê Phòng trọ. Tìm phòng trọ đẹp, tiện nghi, an toàn.'; ?>">
     <meta name="keywords" content="phòng trọ Vinh, thuê phòng Nghệ An, nhà trọ giá rẻ, Mái Nhà Xanh">
     <meta name="robots" content="index, follow">
     <meta name="csrf-token" content="<?php echo $_SESSION['csrf_token'] ?? ''; ?>">
@@ -22,7 +22,7 @@
     <?php
     $og_url   = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
     $og_title = (isset($page_title) ? $page_title . ' - ' : '') . 'Mái Nhà Xanh';
-    $og_desc  = isset($page_description) ? htmlspecialchars($page_description) : 'Mái Nhà Xanh - Chuyên cho thuê phòng trọ chất lượng, giá cả hợp lý tại TP.Vinh, Nghệ An.';
+    $og_desc  = isset($page_description) ? htmlspecialchars($page_description) : 'Mái Nhà Xanh - Nền tảng hỗ trợ kết nối cho thuê Phòng trọ.';
     $og_image = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . '/assets/images/og-banner.jpg';
     if (isset($page_og_image)) $og_image = $page_og_image;
     ?>

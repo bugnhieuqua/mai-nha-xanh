@@ -83,7 +83,7 @@ try {
 
 $total_users = 0;
 try {
-    $stmt = $db->query("SELECT COUNT(*) FROM users");
+    $stmt = $db->query("SELECT COUNT(*) FROM users WHERE role != 'admin' OR role IS NULL");
     $total_users = (int)$stmt->fetchColumn();
 } catch (Exception $e) { $total_users = 0; }
 
@@ -96,16 +96,34 @@ try {
 $topPosters = [];
 try {
     $stmt = $db->query("
-        SELECT nguoidang, COUNT(*) as post_count,
-               SUM(CASE WHEN trangthai='cho_duyet' THEN 1 ELSE 0 END) as pending
-        FROM dangbai_chothuetro
-        WHERE nguoidang IS NOT NULL AND nguoidang != ''
-        GROUP BY nguoidang
+        SELECT 
+            d.nguoidang, 
+            COUNT(*) as post_count,
+            MAX(u.hoten) as hoten,
+            MAX(u.avatar) as avatar,
+            SUM(CASE WHEN d.trangthai='cho_duyet' THEN 1 ELSE 0 END) as pending
+        FROM dangbai_chothuetro d
+        INNER JOIN users u ON d.nguoidang = u.username
+        WHERE d.nguoidang IS NOT NULL AND d.nguoidang != '' AND (u.role != 'admin' OR u.role IS NULL)
+        GROUP BY d.nguoidang
         ORDER BY post_count DESC
         LIMIT 5
     ");
     $topPosters = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} catch (Exception $e) {}
+} catch (Exception $e) {
+    try {
+        $stmt = $db->query("
+            SELECT nguoidang, COUNT(*) as post_count,
+                   SUM(CASE WHEN trangthai='cho_duyet' THEN 1 ELSE 0 END) as pending
+            FROM dangbai_chothuetro
+            WHERE nguoidang IS NOT NULL AND nguoidang != ''
+            GROUP BY nguoidang
+            ORDER BY post_count DESC
+            LIMIT 5
+        ");
+        $topPosters = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e2) { $topPosters = []; }
+}
 
 $recentPending = [];
 try {
@@ -453,16 +471,24 @@ $chat_avg_per_session = $chatbot_sessions > 0 ? ($chatbot_today / $chatbot_sessi
                         <div class="ctx-posters-list" style="display: flex; flex-direction: column; gap: 10px;">
                             <?php foreach ($topPosters as $poster): ?>
                                 <?php
-                                $poster_name = $poster['nguoidang'] ?? 'User';
-                                $initial = strtoupper(function_exists('mb_substr') ? mb_substr($poster_name, 0, 1, 'UTF-8') : substr($poster_name, 0, 1));
+                                $display_name = !empty($poster['hoten']) ? $poster['hoten'] : ($poster['nguoidang'] ?? 'User');
+                                $poster_avatar = $poster['avatar'] ?? '';
+                                $initial = strtoupper(function_exists('mb_substr') ? mb_substr($display_name, 0, 1, 'UTF-8') : substr($display_name, 0, 1));
                                 ?>
                                 <div class="ctx-poster-item" style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,0.4); border: 1px solid rgba(16, 185, 129, 0.08);">
-                                    <div class="ctx-poster-avatar" style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #10b981, #059669); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 0.8rem; font-weight: 700; flex-shrink: 0;">
-                                        <?= htmlspecialchars($initial) ?>
-                                    </div>
+                                    <?php if (!empty($poster_avatar)): ?>
+                                        <img src="<?= htmlspecialchars(buildMediaUrl($poster_avatar, '..')) ?>" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid #10b981; flex-shrink: 0;" alt="Avatar" onerror="this.onerror=null; this.style.display='none';">
+                                    <?php else: ?>
+                                        <div class="ctx-poster-avatar" style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #10b981, #059669); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 0.85rem; font-weight: 700; flex-shrink: 0;">
+                                            <?= htmlspecialchars($initial) ?>
+                                        </div>
+                                    <?php endif; ?>
                                     <div class="ctx-poster-info" style="flex: 1; min-width: 0;">
                                         <div class="ctx-poster-name" style="font-size: 0.82rem; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                                            <?= htmlspecialchars($poster_name) ?>
+                                            <?= htmlspecialchars($display_name) ?>
+                                            <?php if (!empty($poster['hoten']) && $poster['hoten'] !== $poster['nguoidang']): ?>
+                                                <small style="color:var(--text-muted);font-weight:400;">(@<?= htmlspecialchars($poster['nguoidang']) ?>)</small>
+                                            <?php endif; ?>
                                         </div>
                                         <div style="font-size: 0.72rem; color: var(--text-muted);">
                                             <?= $poster['post_count'] ?> bài đăng
