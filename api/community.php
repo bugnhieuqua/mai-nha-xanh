@@ -60,6 +60,8 @@ foreach ([
     "ALTER TABLE reports ADD COLUMN community_post_id INT NULL DEFAULT NULL",
     "ALTER TABLE reports ADD COLUMN community_comment_id INT NULL DEFAULT NULL",
     "ALTER TABLE users ADD COLUMN avatar VARCHAR(255) NULL",
+    "ALTER TABLE community_posts ADD COLUMN edited_at DATETIME DEFAULT NULL",
+    "ALTER TABLE community_comments ADD COLUMN edited_at DATETIME DEFAULT NULL",
 ] as $ddl) {
     try { $db->exec($ddl); } catch (Exception $e) { /* cột đã tồn tại */ }
 }
@@ -589,6 +591,74 @@ switch ($action) {
             ]);
 
             echo json_encode(['success' => true, 'message' => 'Cảm ơn bạn đã báo cáo. Admin sẽ xem xét nội dung này.']);
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        }
+        break;
+
+    case 'edit_post':
+        validateCsrfToken();
+        if (!$user_id) { echo json_encode(['success' => false, 'message' => 'Chưa đăng nhập']); exit; }
+        $id = (int)($_POST['id'] ?? 0);
+        $content = trim($_POST['content'] ?? '');
+
+        if (empty($content)) {
+            echo json_encode(['success' => false, 'message' => 'Nội dung không được để trống']);
+            exit;
+        }
+
+        try {
+            $chk = $db->prepare("SELECT user_id FROM community_posts WHERE id = :id");
+            $chk->execute([':id' => $id]);
+            $authorId = (int)$chk->fetchColumn();
+            
+            if (!$authorId) {
+                echo json_encode(['success' => false, 'message' => 'Bài đăng không tồn tại']);
+                exit;
+            }
+            if ($authorId !== (int)$user_id && $role !== 'admin') {
+                echo json_encode(['success' => false, 'message' => 'Không có quyền chỉnh sửa bài đăng này']);
+                exit;
+            }
+
+            $stmt = $db->prepare("UPDATE community_posts SET content = :content, edited_at = NOW() WHERE id = :id");
+            $stmt->execute([':content' => $content, ':id' => $id]);
+
+            echo json_encode(['success' => true, 'message' => 'Đã chỉnh sửa bài đăng thành công']);
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        }
+        break;
+
+    case 'edit_comment':
+        validateCsrfToken();
+        if (!$user_id) { echo json_encode(['success' => false, 'message' => 'Chưa đăng nhập']); exit; }
+        $id = (int)($_POST['id'] ?? 0);
+        $content = trim($_POST['content'] ?? '');
+
+        if (empty($content)) {
+            echo json_encode(['success' => false, 'message' => 'Nội dung không được để trống']);
+            exit;
+        }
+
+        try {
+            $chk = $db->prepare("SELECT user_id FROM community_comments WHERE id = :id");
+            $chk->execute([':id' => $id]);
+            $authorId = (int)$chk->fetchColumn();
+            
+            if (!$authorId) {
+                echo json_encode(['success' => false, 'message' => 'Bình luận không tồn tại']);
+                exit;
+            }
+            if ($authorId !== (int)$user_id && $role !== 'admin') {
+                echo json_encode(['success' => false, 'message' => 'Không có quyền chỉnh sửa bình luận này']);
+                exit;
+            }
+
+            $stmt = $db->prepare("UPDATE community_comments SET content = :content, edited_at = NOW() WHERE id = :id");
+            $stmt->execute([':content' => $content, ':id' => $id]);
+
+            echo json_encode(['success' => true, 'message' => 'Đã chỉnh sửa bình luận thành công']);
         } catch (Exception $e) {
             echo json_encode(['success' => false, 'message' => $e->getMessage()]);
         }

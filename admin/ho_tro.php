@@ -534,16 +534,19 @@ function renderMessages(rows, append) {
         if (renderedMsgIds.has(fingerprint)) return;
         renderedMsgIds.add(fingerprint);
         
-        if (row.user_message) el.appendChild(makeBubble(row.user_message, 'user', row.created_at));
-        if (row.admin_message) el.appendChild(makeBubble(row.admin_message, 'admin', row.created_at));
+        if (row.user_message) el.appendChild(makeBubble(row.user_message, 'user', row.created_at, row.id));
+        if (row.admin_message) el.appendChild(makeBubble(row.admin_message, 'admin', row.created_at, row.id));
     });
     
     if (rows.length > 0) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
 }
 
-function makeBubble(text, type, timeStr) {
+function makeBubble(text, type, timeStr, messageId = null) {
     const row = document.createElement('div');
     row.className = `bubble-row ${type}`;
+    if (messageId) {
+        row.dataset.msgId = messageId;
+    }
     
     let avatarHtml = '';
     if (type === 'user') {
@@ -567,8 +570,68 @@ function makeBubble(text, type, timeStr) {
         displayTime = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
     }
 
-    row.innerHTML = `${avatarHtml}<div class="bubble">${escHtml(text)}<div class="bubble-time">${displayTime}</div></div>`;
+    // Nút sửa nếu là admin gửi và tin nhắn có id trong CSDL
+    const editBtn = (type === 'admin' && messageId) 
+        ? `<button class="btn-edit-support" onclick="editSupportMessage(${messageId}, this)" style="background:none; border:none; color:var(--text-muted); cursor:pointer; padding: 4px; margin-right: 6px; font-size: 0.8rem;" title="Sửa tin"><i class="fas fa-edit"></i></button>`
+        : '';
+
+    row.innerHTML = `${avatarHtml}
+        <div style="display:flex; align-items:center;">
+            ${type === 'admin' ? editBtn : ''}
+            <div class="bubble" style="word-break:break-word;">
+                <p style="margin:0;">${escHtml(text)}</p>
+                <div class="bubble-time">${displayTime}</div>
+            </div>
+            ${type === 'user' ? editBtn : ''}
+        </div>`;
     return row;
+}
+
+async function editSupportMessage(messageId, btnEl) {
+    const rowEl = btnEl.closest('.bubble-row');
+    const bubbleTextEl = rowEl.querySelector('.bubble p');
+    const currentText = bubbleTextEl.textContent;
+
+    const { value: text } = await Swal.fire({
+        title: 'Chỉnh sửa tin nhắn hỗ trợ',
+        input: 'textarea',
+        inputValue: currentText,
+        showCancelButton: true,
+        confirmButtonText: 'Lưu thay đổi',
+        cancelButtonText: 'Huỷ',
+        confirmButtonColor: '#10b981',
+        preConfirm: (value) => {
+            if (!value.trim()) {
+                Swal.showValidationMessage('Nội dung không được để trống.');
+                return false;
+            }
+            return value.trim();
+        }
+    });
+
+    if (text) {
+        const fd = new FormData();
+        fd.append('action', 'edit_support');
+        fd.append('message_id', messageId);
+        fd.append('content', text);
+
+        try {
+            const res = await fetch('../api/edit-chat-message.php', {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': CSRF_TOKEN },
+                body: fd
+            });
+            const data = await res.json();
+            if (data.success) {
+                bubbleTextEl.textContent = text;
+                Swal.fire({ icon: 'success', title: 'Đã cập nhật tin nhắn', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 });
+            } else {
+                Swal.fire('Lỗi', data.message, 'error');
+            }
+        } catch(e) {
+            Swal.fire('Lỗi', 'Không thể kết nối máy chủ.', 'error');
+        }
+    }
 }
 
 async function sendMessage() {

@@ -171,6 +171,7 @@ async function loadReports(page = 1) {
                 </td>
                 <td style="max-width:350px;">
                     ${item.reported_username ? `<div style="font-size:.85rem;"><strong>Đối tượng:</strong> <span class="badge badge-outline">${escHtml(item.reported_username)}</span></div>` : ''}
+                    ${item.reported_group_name ? `<div style="font-size:.85rem; margin-top:4px;"><strong>Nhóm:</strong> <span class="status-badge status-locked" style="background:#fee2e2; color:#991b1b; padding:2px 8px; border-radius:10px;"><i class="fas fa-users"></i> ${escHtml(item.reported_group_name)}</span></div>` : ''}
                     <div style="background:#f8fafc; padding:10px; border-radius:10px; margin-top:6px; font-size:.85rem; border:1px solid var(--border);">${escHtml(item.reason)}</div>
                 </td>
                 <td><span class="status-badge status-${item.status}">${item.status==='resolved'?'Đã xử lý':(item.status==='pending'?'Chờ':'Đang xem')}</span></td>

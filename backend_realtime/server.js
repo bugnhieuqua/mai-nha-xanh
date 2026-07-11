@@ -5,7 +5,11 @@ const io = require('socket.io')(server, {
     cors: {
         origin: "*",
         methods: ["GET", "POST"]
-    }
+    },
+    // Heartbeat optimizations for lower latency and less server load
+    pingInterval: 15000, 
+    pingTimeout: 10000,
+    cookie: false
 });
 const axios = require('axios');
 const fs = require('fs');
@@ -16,9 +20,6 @@ const onlineUsers = new Map(); // userId (string) => socketId (string)
 const activeCalls = new Map(); // callId (string) => { callerId, receiverId, callerSocketId, receiverSocketId, timeoutId, startTime }
 
 // ─── Xác định PHP_API_BASE ────────────────────────────────────
-// Ưu tiên: process.env.PHP_API_BASE hoặc process.env.APP_URL (trên Render)
-// Nếu không có, đọc từ file .env (cho môi trường local)
-// Nếu vẫn không có, dùng giá trị mặc định nhưng sẽ báo lỗi nếu không set.
 let PHP_API_BASE = process.env.PHP_API_BASE || process.env.APP_URL || '';
 
 if (!PHP_API_BASE) {
@@ -44,10 +45,9 @@ if (!PHP_API_BASE) {
     }
 }
 
-// Nếu vẫn chưa có, cảnh báo nhưng vẫn cho chạy (các chức năng DB sẽ không hoạt động)
 if (!PHP_API_BASE) {
     console.warn('[Warning] PHP_API_BASE chưa được cấu hình. Các chức năng lưu tin nhắn, cập nhật status sẽ không hoạt động.');
-    PHP_API_BASE = ''; // Để tránh lỗi gọi API sai
+    PHP_API_BASE = '';
 } else {
     if (PHP_API_BASE.endsWith('/')) PHP_API_BASE = PHP_API_BASE.slice(0, -1);
     console.log(`[API Base] ${PHP_API_BASE}`);
@@ -69,7 +69,7 @@ async function callPhpApi(endpoint, data) {
         const url = `${PHP_API_BASE}${endpoint}`;
         const response = await axios.post(url, data, {
             headers: { 'Content-Type': 'application/json' },
-            timeout: 5000
+            timeout: 8000
         });
         return response.data;
     } catch (error) {
@@ -85,12 +85,20 @@ async function updateUserStatus(userId, isOnline) {
     });
 }
 
-async function saveMessage(conversationId, senderId, content) {
-    await callPhpApi('/api/save-message.php', {
+async function saveMessage(conversationId, senderId, content, type = 'text') {
+    return await callPhpApi('/api/save-message.php', {
         conversation_id: parseInt(conversationId, 10),
         sender_id: parseInt(senderId, 10),
         content: content,
-        type: 'text'
+        type: type
+    });
+}
+
+async function moderateGroupMessage(conversationId, content, messageId) {
+    return await callPhpApi('/api/ai_moderation.php', {
+        conversation_id: parseInt(conversationId, 10),
+        content: content,
+        message_id: messageId ? parseInt(messageId, 10) : null
     });
 }
 
@@ -104,10 +112,8 @@ io.on('connection', (socket) => {
         const uid = String(userId);
         onlineUsers.set(uid, socket.id);
 
-        // Gửi danh sách online cho chính client
         const onlineList = Array.from(onlineUsers.keys());
         socket.emit('online-users-list', onlineList);
-        // Báo cho người khác
         socket.broadcast.emit('status-change', { userId: uid, status: 'online' });
 
         await updateUserStatus(uid, true);
@@ -119,25 +125,142 @@ io.on('connection', (socket) => {
         socket.emit('online-users-list', ids);
     });
 
+    // ── Group Rooms Joining ──
+    socket.on('join-group-rooms', (groupIds) => {
+        if (!Array.isArray(groupIds)) return;
+        groupIds.forEach(gid => {
+            const roomName = `group_${gid}`;
+            socket.join(roomName);
+            console.log(`[Socket ${socket.id}] joined room: ${roomName}`);
+        });
+    });
+
+    socket.on('join-group-room', (groupId) => {
+        if (!groupId) return;
+        const roomName = `group_${groupId}`;
+        socket.join(roomName);
+        console.log(`[Socket ${socket.id}] joined single room: ${roomName}`);
+    });
+
     // ── Messaging ──
     socket.on('send-message', async (payload) => {
-        const { conversationId, senderId, receiverId, messageContent } = payload;
-        if (!conversationId || !senderId || !receiverId || !messageContent) return;
+        const { conversationId, senderId, receiverId, messageContent, isGroup, senderName, messageType } = payload;
+        if (!conversationId || !senderId || !messageContent) return;
 
-        // Gửi trực tiếp nếu receiver online
-        const receiverSocketId = onlineUsers.get(String(receiverId));
-        if (receiverSocketId) {
-            io.to(receiverSocketId).emit('receive-message', {
+        const mType = messageType || 'text';
+
+        // Lưu vào cơ sở dữ liệu trước (chạy background)
+        const saveRes = await saveMessage(conversationId, senderId, messageContent, mType);
+        const messageId = saveRes && saveRes.status === 'success' ? saveRes.message_id : null;
+
+        if (isGroup) {
+            // Broadcast tin nhắn đến room nhóm
+            socket.to(`group_${conversationId}`).emit('receive-message', {
                 conversationId,
                 senderId,
                 content: messageContent,
-                createdAt: new Date()
+                type: mType,
+                createdAt: new Date(),
+                isGroup: true,
+                senderName: senderName || 'Thành viên',
+                id: messageId
             });
-        }
+            console.log(`[Group Message] Room group_${conversationId}: ${senderId} → ${messageContent.substring(0, 30)}... [Type: ${mType}]`);
 
-        // Lưu DB (background)
-        await saveMessage(conversationId, senderId, messageContent);
-        console.log(`[Message] ${senderId} → ${receiverId}: ${messageContent.substring(0, 30)}...`);
+            // Chạy AI kiểm duyệt tin nhắn nhóm
+            if (mType === 'text') {
+                moderateGroupMessage(conversationId, messageContent, messageId).then(modRes => {
+                    if (modRes && modRes.success && modRes.action_taken === 'lock') {
+                        console.log(`[AI Blocked Group] Group ${conversationId} locked. Reason: ${modRes.reason}`);
+                        io.to(`group_${conversationId}`).emit('group-locked', {
+                            conversationId,
+                            reason: modRes.reason
+                        });
+                    }
+                }).catch(err => {
+                    console.error('[AI Moderation Error]', err.message);
+                });
+            }
+
+        } else {
+            // Direct message 1-1
+            if (!receiverId) return;
+            const receiverSocketId = onlineUsers.get(String(receiverId));
+            if (receiverSocketId) {
+                io.to(receiverSocketId).emit('receive-message', {
+                    conversationId,
+                    senderId,
+                    content: messageContent,
+                    type: mType,
+                    createdAt: new Date(),
+                    isGroup: false,
+                    id: messageId
+                });
+            }
+        }
+        
+        // Emit confirmation back to the sender
+        socket.emit('message-sent-ack', {
+            conversationId,
+            messageId: messageId,
+            tempId: payload.tempId
+        });
+    });
+
+    // ── Recall Message ──
+    socket.on('recall-message', (payload) => {
+        const { conversationId, messageId, isGroup, receiverId } = payload;
+        if (!conversationId || !messageId) return;
+
+        if (isGroup) {
+            socket.to(`group_${conversationId}`).emit('message-recalled', { conversationId, messageId });
+        } else {
+            if (receiverId) {
+                const receiverSocketId = onlineUsers.get(String(receiverId));
+                if (receiverSocketId) {
+                    io.to(receiverSocketId).emit('message-recalled', { conversationId, messageId });
+                }
+            }
+        }
+    });
+
+    // ── Pin / Unpin Message ──
+    socket.on('pin-message', (payload) => {
+        const { conversationId, messageId, isGroup } = payload;
+        if (!conversationId) return;
+
+        if (isGroup) {
+            // Thông báo đến tất cả thành viên nhóm (trừ người gửi)
+            socket.to(`group_${conversationId}`).emit('message-pinned', { conversationId, messageId });
+        }
+        // Chat 1-1: client tự reload sau khi API thành công, không cần broadcast thêm
+    });
+
+    // ── Typing status ──
+    socket.on('typing', (data) => {
+        const { conversationId, senderId, senderName, isTyping, isGroup, receiverId } = data;
+        if (!conversationId || !senderId) return;
+
+        if (isGroup) {
+            socket.to(`group_${conversationId}`).emit('typing', {
+                conversationId,
+                senderId,
+                senderName,
+                isTyping
+            });
+        } else {
+            if (receiverId) {
+                const receiverSocketId = onlineUsers.get(String(receiverId));
+                if (receiverSocketId) {
+                    io.to(receiverSocketId).emit('typing', {
+                        conversationId,
+                        senderId,
+                        senderName,
+                        isTyping
+                    });
+                }
+            }
+        }
     });
 
     // ── Call Signaling ──
@@ -157,10 +280,8 @@ io.on('connection', (socket) => {
             return;
         }
 
-        // Tạo callId duy nhất
         const callId = `${callerId}-${receiverId}-${Date.now()}`;
 
-        // Lưu trạng thái cuộc gọi
         activeCalls.set(callId, {
             callerId,
             receiverId,
@@ -170,7 +291,6 @@ io.on('connection', (socket) => {
             callType
         });
 
-        // Gửi ring cho receiver
         io.to(receiverSocketId).emit('incoming-call-ring', {
             callId,
             callerId,
@@ -181,11 +301,9 @@ io.on('connection', (socket) => {
 
         console.log(`[Call] Initiated ${callType} call ${callId}: ${callerId} → ${receiverId}`);
 
-        // Timeout 30s
         const timeoutId = setTimeout(() => {
             if (activeCalls.has(callId)) {
                 console.log(`[Call] Timeout: ${callId}`);
-                // Báo cho cả hai bên
                 const callInfo = activeCalls.get(callId);
                 if (callInfo.callerSocketId) {
                     io.to(callInfo.callerSocketId).emit('call-timeout', { callId });
@@ -197,7 +315,6 @@ io.on('connection', (socket) => {
             }
         }, 30000);
 
-        // Gắn timeout vào call info
         const callInfo = activeCalls.get(callId);
         callInfo.timeoutId = timeoutId;
         activeCalls.set(callId, callInfo);
@@ -213,17 +330,14 @@ io.on('connection', (socket) => {
         }
 
         const callInfo = activeCalls.get(callId);
-        // Xóa timeout
         if (callInfo.timeoutId) {
             clearTimeout(callInfo.timeoutId);
         }
 
-        // Thông báo cho caller
         if (callInfo.callerSocketId) {
             io.to(callInfo.callerSocketId).emit('call-accepted', { callId });
             console.log(`[Call] Accepted: ${callId}`);
         } else {
-            // Caller đã offline, báo lỗi cho receiver
             socket.emit('call-error', { message: 'Người gọi đã rời khỏi cuộc gọi' });
             activeCalls.delete(callId);
         }
@@ -236,7 +350,6 @@ io.on('connection', (socket) => {
         if (activeCalls.has(callId)) {
             const callInfo = activeCalls.get(callId);
             if (callInfo.timeoutId) clearTimeout(callInfo.timeoutId);
-            // Thông báo cho caller
             if (callInfo.callerSocketId) {
                 io.to(callInfo.callerSocketId).emit('call-rejected', { callId });
             }
@@ -252,7 +365,6 @@ io.on('connection', (socket) => {
         if (activeCalls.has(callId)) {
             const callInfo = activeCalls.get(callId);
             if (callInfo.timeoutId) clearTimeout(callInfo.timeoutId);
-            // Thông báo cho receiver
             if (callInfo.receiverSocketId) {
                 io.to(callInfo.receiverSocketId).emit('call-cancelled', { callId });
             }
@@ -261,7 +373,6 @@ io.on('connection', (socket) => {
         }
     });
 
-    // ── Hỗ trợ sự kiện end-call (khi một bên kết thúc cuộc gọi sau khi đã nối) ──
     socket.on('end-call', (payload) => {
         const { callId } = payload;
         if (!callId) return;
@@ -269,7 +380,6 @@ io.on('connection', (socket) => {
         if (activeCalls.has(callId)) {
             const callInfo = activeCalls.get(callId);
             if (callInfo.timeoutId) clearTimeout(callInfo.timeoutId);
-            // Thông báo cho bên kia
             const otherSocketId = (socket.id === callInfo.callerSocketId) 
                 ? callInfo.receiverSocketId 
                 : callInfo.callerSocketId;
@@ -283,7 +393,6 @@ io.on('connection', (socket) => {
 
     // ── Disconnect ──
     socket.on('disconnect', async () => {
-        // Tìm userId từ socket id
         let disconnectedUserId = null;
         for (let [userId, socketId] of onlineUsers.entries()) {
             if (socketId === socket.id) {
@@ -299,10 +408,8 @@ io.on('connection', (socket) => {
             await updateUserStatus(disconnectedUserId, false);
         }
 
-        // Xử lý các cuộc gọi đang hoạt động có liên quan đến socket này
         for (let [callId, callInfo] of activeCalls.entries()) {
             if (callInfo.callerSocketId === socket.id || callInfo.receiverSocketId === socket.id) {
-                // Thông báo cho bên còn lại
                 const otherSocketId = (socket.id === callInfo.callerSocketId) 
                     ? callInfo.receiverSocketId 
                     : callInfo.callerSocketId;

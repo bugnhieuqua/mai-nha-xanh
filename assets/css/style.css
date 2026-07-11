@@ -75,6 +75,20 @@ button:not(.navbar *) i,
   --toast-bg: #ffffff;
   --toast-title: #1e293b;
   --toast-body: #64748b;
+
+  /* Custom UI/UX theme variables */
+  --body-bg: #f4f6f9;
+  --card-bg: #ffffff;
+  --sidebar-bg: #fafbfe;
+  --chat-bg: #ffffff;
+  --chat-history-bg: #f8fafc;
+  --input-bg: #ffffff;
+  --text-color: #1e293b;
+  --border-color: rgba(0, 0, 0, 0.05);
+  --chat-bubble-bg-received: #f3f4f6;
+  --chat-bubble-color-received: #1f2937;
+  --contact-active-bg: #ecfdf5;
+  --contact-hover-bg: #f3f4f6;
 }
 
 [data-theme="dark"] {
@@ -111,6 +125,20 @@ button:not(.navbar *) i,
   --toast-bg: #1e2937;
   --toast-title: #f8fafc;
   --toast-body: #cbd5e1;
+
+  /* Custom UI/UX theme variables for dark mode */
+  --body-bg: #0f172a;
+  --card-bg: #1e293b;
+  --sidebar-bg: #111827;
+  --chat-bg: #1e293b;
+  --chat-history-bg: #0f172a;
+  --input-bg: #0f172a;
+  --text-color: #f1f5f9;
+  --border-color: rgba(255, 255, 255, 0.08);
+  --chat-bubble-bg-received: #374151;
+  --chat-bubble-color-received: #f9fafb;
+  --contact-active-bg: rgba(16, 185, 129, 0.2);
+  --contact-hover-bg: rgba(255, 255, 255, 0.05);
 }
 
 /* Circular Reveal View Transition for Theme Switch */
@@ -2009,6 +2037,16 @@ textarea.form-control {
   margin-bottom: 20px;
   font-size: 1.3rem;
   text-shadow: none !important;
+}
+.footer-map iframe {
+  height: 380px !important;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+}
+.map-container iframe {
+  height: 600px !important;
+  border-radius: 18px;
+  box-shadow: 0 15px 45px rgba(0,0,0,0.2);
 }
 
 .footer-contact li {
@@ -4004,3 +4042,191 @@ html { scroll-behavior: smooth; }
 [data-theme="dark"] .featured-rooms-section {
   background: transparent !important;
 }
+
+/* ============================================================ */
+/*   COMMUNITY & SWEETALERT2 DARK MODE CUSTOMIZATION           */
+/* ============================================================ */
+
+/* SweetAlert2 overrides under data-theme="dark" */
+[data-theme="dark"] .swal2-popup {
+  background: #1e293b !important;
+  color: #f1f5f9 !important;
+  border: 1px solid rgba(16, 185, 129, 0.3) !important;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5) !important;
+}
+[data-theme="dark"] .swal2-title {
+  color: #ffffff !important;
+}
+[data-theme="dark"] .swal2-html-container {
+  color: #cbd5e1 !important;
+}
+[data-theme="dark"] .swal2-input,
+[data-theme="dark"] .swal2-textarea {
+  background-color: #0f172a !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(16, 185, 129, 0.3) !important;
+}
+[data-theme="dark"] .swal2-input:focus,
+[data-theme="dark"] .swal2-textarea:focus {
+  border-color: #10b981 !important;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2) !important;
+}
+[data-theme="dark"] .swal2-input-label {
+  color: #cbd5e1 !important;
+}
+[data-theme="dark"] .swal2-validation-message {
+  background-color: #334155 !important;
+  color: #f87171 !important;
+}
+[data-theme="dark"] .swal2-cancel {
+  background-color: #4b5563 !important;
+  color: #ffffff !important;
+}
+
+/* Community Section Overrides under data-theme="dark" */
+[data-theme="dark"] .comm-create-card,
+[data-theme="dark"] .comm-post-card {
+  background: linear-gradient(155deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.8) 100%) !important;
+  border-color: rgba(16, 185, 129, 0.25) !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4) !important;
+  color: #e2e8f0 !important;
+}
+
+[data-theme="dark"] .comm-create-footer {
+  background: linear-gradient(135deg, #1e293b, #0f172a) !important;
+  border-top-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+[data-theme="dark"] .comm-text-input {
+  background: #0f172a !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
+  color: #f1f5f9 !important;
+}
+
+[data-theme="dark"] .comm-text-input:focus {
+  border-color: #10b981 !important;
+}
+
+[data-theme="dark"] .comm-comment-bubble {
+  background: linear-gradient(155deg, rgba(30, 41, 59, 0.85) 0%, rgba(15, 23, 42, 0.95) 100%) !important;
+  border-color: rgba(16, 185, 129, 0.2) !important;
+  color: #cbd5e1 !important;
+}
+
+[data-theme="dark"] .comm-comment-user {
+  color: #f8fafc !important;
+}
+
+[data-theme="dark"] .comm-comment-text {
+  color: #e2e8f0 !important;
+}
+
+[data-theme="dark"] .comm-comment-action:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+[data-theme="dark"] .comm-post-act-btn {
+  color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .comm-post-act-btn:hover {
+  background: rgba(16, 185, 129, 0.15) !important;
+  color: #34d399 !important;
+}
+
+[data-theme="dark"] .comm-post-card div[style*="color:#334155"],
+[data-theme="dark"] .comm-post-card div[style*="color: #334155"] {
+  color: #e2e8f0 !important;
+}
+
+[data-theme="dark"] .comm-post-card div[style*="color:#1e293b"],
+[data-theme="dark"] .comm-post-card div[style*="color: #1e293b"] {
+  color: #f8fafc !important;
+}
+
+[data-theme="dark"] label {
+  color: #cbd5e1 !important;
+}
+
+/* Restoring transparent input styling for Chatbot and Admin Support widgets in dark mode */
+[data-theme="dark"] .admin-message-input,
+[data-theme="dark"] .chatbot-popup .message-input,
+[data-theme="dark"] .admin-chat-popup textarea,
+[data-theme="dark"] .chatbot-popup textarea {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  color: #ffffff !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   MESSAGE CONTEXT MENU  (3-chấm + Long press)
+══════════════════════════════════════════════════════════════ */
+
+.msg-more-trigger {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 7px;
+  border-radius: 50%;
+  color: #94a3b8;
+  font-size: 0.82rem;
+  transition: background 0.18s, color 0.18s, opacity 0.2s;
+  flex-shrink: 0;
+  align-self: center;
+}
+.msg-more-trigger:hover {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+}
+[data-theme="dark"] .msg-more-trigger { color: #64748b; }
+[data-theme="dark"] .msg-more-trigger:hover { background: rgba(16, 185, 129, 0.18); color: #10b981; }
+
+.msg-context-menu {
+  display: none;
+  position: absolute;
+  z-index: 9999;
+  flex-direction: column;
+  min-width: 170px;
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.07);
+  border-radius: 14px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.16);
+  padding: 6px;
+  animation: ctxMenuIn 0.15s ease;
+  overflow: hidden;
+}
+@keyframes ctxMenuIn {
+  from { opacity: 0; transform: scale(0.92) translateY(-6px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+[data-theme="dark"] .msg-context-menu {
+  background: #1e293b;
+  border-color: rgba(255,255,255,0.08);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+.msg-context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  font-size: 0.87rem;
+  font-weight: 500;
+  color: #334155;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.msg-context-menu-item:hover { background: rgba(16,185,129,0.09); color: #10b981; }
+.msg-context-menu-item i { width: 16px; text-align: center; font-size: 0.8rem; }
+.msg-context-menu-item.danger { color: #ef4444; }
+.msg-context-menu-item.danger:hover { background: rgba(239,68,68,0.09); }
+[data-theme="dark"] .msg-context-menu-item { color: #cbd5e1; }
+[data-theme="dark"] .msg-context-menu-item:hover { background: rgba(16,185,129,0.13); color: #34d399; }
+[data-theme="dark"] .msg-context-menu-item.danger { color: #f87171; }

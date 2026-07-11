@@ -21,11 +21,17 @@ try {
             reported_post_id INT DEFAULT NULL,
             community_post_id INT DEFAULT NULL,
             community_comment_id INT DEFAULT NULL,
+            reported_conversation_id INT DEFAULT NULL,
             reason TEXT NOT NULL,
             status VARCHAR(20) DEFAULT 'pending',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (reporter_id) REFERENCES users(id) ON DELETE CASCADE
         )");
+    } catch (Exception $e) {}
+    
+    // Auto-migration
+    try {
+        $db->exec("ALTER TABLE reports ADD COLUMN reported_conversation_id INT DEFAULT NULL");
     } catch (Exception $e) {}
     
     $action = $_GET['action'] ?? $_POST['action'] ?? 'list';
@@ -38,10 +44,12 @@ try {
         
         $sql = "SELECT r.*, 
                        u1.username as reporter_name, 
-                       u2.username as reported_username
+                       u2.username as reported_username,
+                       c.group_name as reported_group_name
                 FROM reports r
                 LEFT JOIN users u1 ON r.reporter_id = u1.id
                 LEFT JOIN users u2 ON r.reported_user_id = u2.id
+                LEFT JOIN conversations c ON r.reported_conversation_id = c.id
                 ORDER BY r.id DESC 
                 LIMIT :limit OFFSET :offset";
                 

@@ -5,7 +5,7 @@ $_chat_username  = htmlspecialchars($_SESSION['username'] ?? '');
 ?>
 <!-- ===== ADMIN CHAT WIDGET ===== -->
 <!-- Admin Chat Toggler Wrapper -->
-<div class="admin-chat-wrapper" style="position: fixed; bottom: 90px; right: 15px; width: 50px; height: 50px; z-index: 10000; overflow: visible;">
+<div class="admin-chat-wrapper" style="position: fixed; bottom: 75px; right: 20px; width: 50px; height: 50px; z-index: 10000; overflow: visible;">
     <button id="admin-chat-toggler"
             title="Chat với Quản trị viên"
             data-logged-in="<?php echo $_chat_logged_in ? '1' : '0'; ?>"
@@ -46,7 +46,7 @@ $_chat_username  = htmlspecialchars($_SESSION['username'] ?? '');
             <textarea
                 id="admin-message-input"
                 class="admin-message-input"
-                placeholder="Nhập tin nhắn cho quản trị viên..."
+                placeholder="Nhập tin nhắn cho admin"
                 rows="1"
                 required
             ></textarea>

@@ -42,6 +42,13 @@ try {
 } catch (Exception $e) {
 }
 
+// Lấy số lượng nhóm chat bị khoá (để hiện badge cảnh báo)
+$groups_locked = 0;
+try {
+    $groups_locked = (int) $db->query("SELECT COUNT(*) FROM conversations WHERE is_group=1 AND is_locked=1")->fetchColumn();
+} catch (Exception $e) {
+}
+
 // Lấy file hiện tại để set active menu
 $current_page = basename($_SERVER['PHP_SELF']);
 
@@ -91,6 +98,11 @@ $sidebar_initial = strtoupper(function_exists('mb_substr')
             <i class="fas fa-robot"></i> Lịch sử Tin nhắn
             <span class="nav-badge badge-tone-indigo" id="nav-badge-tinnhan"
                 style="<?= $tinnhan_new > 0 ? '' : 'display:none;' ?>"><?= $tinnhan_new ?></span>
+        </a>
+        <a href="nhom_chat.php" class="nav-item <?= $current_page == 'nhom_chat.php' ? 'active' : '' ?>">
+            <i class="fas fa-users-rectangle"></i> Nhóm Chat
+            <span class="nav-badge badge-tone-red" id="nav-badge-groups-locked"
+                style="<?= $groups_locked > 0 ? '' : 'display:none;' ?>"><?= $groups_locked ?></span>
         </a>
         <a href="community.php" class="nav-item <?= $current_page == 'community.php' ? 'active' : '' ?>">
             <i class="fas fa-users"></i> Quản lý Cộng đồng

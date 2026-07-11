@@ -5,6 +5,12 @@ $page_title = "Liên hệ";
 include 'includes/header.php';
 ?>
 
+<style>
+.page-header {
+    background: linear-gradient(rgba(15, 23, 42, 0.65), rgba(6, 78, 59, 0.72)), url('assets/images/contact_banner.png') no-repeat center center / cover !important;
+}
+</style>
+
 <!-- Page Header -->
 <section class="page-header">
     <div class="hero-bg-layer"></div>
@@ -219,7 +225,7 @@ include 'includes/header.php';
             <iframe 
                 src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d51966.30698661654!2d105.6157091331863!3d18.6923405!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3139ce0e4264ec49%3A0x419cf16d3b928fa2!2zVHLGsOG7nW5nIMSQ4bqhaSBo4buNYyBLaW5oIHThur8gTmdo4buHIEFu!5e1!3m2!1svi!2s!4v1780655706906!5m2!1svi!2s"
                 width="100%" 
-                height="450" 
+                height="600" 
                 style="border:0;" 
                 allowfullscreen="" 
                 loading="lazy" 

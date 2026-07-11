@@ -84,7 +84,7 @@ self.addEventListener("fetch", (event) => {
 
   // 4. API calls — always Network, no cache
   if (url.pathname.includes("/api/") || url.searchParams.has("ajax")) {
-    event.respondWith(fetch(event.request, { cache: "no-store" }));
+    event.respondWith(fetch(event.request));
     return;
   }
 
@@ -92,7 +92,7 @@ self.addEventListener("fetch", (event) => {
   const isHTML = event.request.headers.get("accept")?.includes("text/html");
   if (isHTML) {
     event.respondWith(
-      fetch(event.request, { cache: "no-store" })
+      fetch(event.request)
         .catch(() =>
           caches.match(event.request).then(
             (cached) => cached || caches.match(OFFLINE_URL)

@@ -13,11 +13,34 @@ include 'includes/header.php';
 ?>
 
 <!-- ── Community Hero Banner ───────────────────────────── -->
-<section class="comm-hero-section">
-    <div class="hero-bg-layer"></div>
-    <div class="hero-glow-circle hero-glow-1"></div>
-    <div class="hero-glow-circle hero-glow-2"></div>
-    <div class="container" style="position:relative;z-index:2;">
+<section class="comm-hero-section" style="position:relative; overflow:hidden; padding: 100px 0 36px; background: #0f172a !important;">
+    <!-- Background Video -->
+    <video autoplay muted loop playsinline class="comm-hero-video" style="
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        min-width: 100%;
+        min-height: 100%;
+        width: auto;
+        height: auto;
+        transform: translate(-50%, -50%);
+        z-index: 1;
+        object-fit: cover;
+        pointer-events: none;
+        opacity: 0.55;
+    ">
+        <source src="mai-nha-xanh.mp4" type="video/mp4">
+    </video>
+    <!-- Dark Gradient Overlay -->
+    <div class="comm-hero-overlay" style="
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(135deg, rgba(15,23,42,0.85) 0%, rgba(6,78,59,0.7) 60%, rgba(15,23,42,0.85) 100%);
+        z-index: 2;
+        pointer-events: none;
+    "></div>
+
+    <div class="container" style="position:relative; z-index:3;">
         <div class="comm-hero-badge"><i class="fas fa-users"></i> Cộng đồng</div>
         <h2 class="typing-effect comm-hero-title">Cộng đồng Mái Nhà Xanh</h2>
         <p class="comm-hero-sub">Chia sẻ thông tin, đánh giá phòng trọ và kết nối với mọi người.</p>
@@ -582,10 +605,10 @@ include 'includes/header.php';
 
         <!-- Composer Card -->
         <div class="comm-create-card" style="
-            background: #fff;
+            background: var(--card-bg, #fff);
             border-radius: 24px;
             overflow: hidden;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.08), 0 0 0 1px rgba(16,185,129,0.08);
+            box-shadow: var(--shadow, 0 8px 32px rgba(0,0,0,0.08)), 0 0 0 1px rgba(16,185,129,0.08);
             margin-bottom: 28px;
             transition: box-shadow .25s;
             position: relative;
@@ -600,12 +623,12 @@ include 'includes/header.php';
                     <div class="comm-avatar" style="flex-shrink:0; display:flex; align-items:center; justify-content:center; border:2px solid rgba(16,185,129,0.3); box-shadow:0 4px 12px rgba(16,185,129,0.2);"><?= strtoupper(substr($_SESSION['username'] ?? 'U', 0, 1)) ?></div>
                 <?php endif; ?>
                 <div style="flex:1;">
-                    <textarea id="postContent" class="comm-text-input" style="width:100%; min-height:72px; border-radius:14px; background:#f8fafc; border:1.5px solid #e2e8f0; padding:12px 16px; font-size:1rem;" placeholder="Bạn đang nghĩ gì, <?= htmlspecialchars($_SESSION['username'] ?? 'bạn') ?>? ✍️"></textarea>
+                    <textarea id="postContent" class="comm-text-input" style="width:100%; min-height:72px; border-radius:14px; background: var(--light-color, #f8fafc); border:1.5px solid var(--card-border, #e2e8f0); padding:12px 16px; font-size:1rem;" placeholder="Bạn đang nghĩ gì, <?= htmlspecialchars($_SESSION['username'] ?? 'bạn') ?>? ✍️"></textarea>
                     <div id="preview-strip-post" class="comm-preview-strip"></div>
                 </div>
             </div>
 
-            <div class="comm-create-footer" style="display:flex !important; flex-direction:row !important; flex-wrap:nowrap !important; align-items:center !important; justify-content:space-between !important; background:linear-gradient(135deg,#f8fafc,#f0fdf4); border-top:1px solid #e2e8f0; padding:12px 20px; gap:8px;">
+            <div class="comm-create-footer" style="display:flex !important; flex-direction:row !important; flex-wrap:nowrap !important; align-items:center !important; justify-content:space-between !important; background: linear-gradient(135deg, var(--light-color, #f8fafc), var(--notif-bg-unread, #f0fdf4)); border-top:1px solid var(--card-border, #e2e8f0); padding:12px 20px; gap:8px;">
                 <div style="display:flex; flex-direction:row; flex-wrap:nowrap; gap:6px; align-items:center; flex-shrink:0;">
                     <button class="comm-media-btn" title="Thêm ảnh" onclick="document.getElementById('img-input-post').click()" style="border-radius:10px; color:#10b981; border:1.5px solid rgba(16,185,129,0.2); background:rgba(16,185,129,0.06);"><i class="fas fa-image"></i></button>
                     <button class="comm-media-btn" title="Thêm video" onclick="document.getElementById('vid-input-post').click()" style="border-radius:10px; color:#3b82f6; border:1.5px solid rgba(59,130,246,0.2); background:rgba(59,130,246,0.06);"><i class="fas fa-video"></i></button>
@@ -683,19 +706,20 @@ function buildPostHtml(p) {
         +     (p.avatar 
                 ? '<img src="' + esc(p.avatar) + '" class="comm-avatar" style="object-fit:cover" alt="Avatar">'
                 : '<div class="comm-avatar" style="display:flex;align-items:center;justify-content:center">' + esc(p.username.charAt(0).toUpperCase()) + '</div>')
-        +     '<div><div style="font-weight:700;color:#1e293b">' + esc(p.username) + '</div><div style="font-size:.78rem;color:#94a3b8">' + fmtDate(p.created_at) + '</div></div>'
+        +     '<div><div style="font-weight:700;color:var(--text-color, #1e293b)">' + esc(p.username) + '</div><div style="font-size:.78rem;color:#94a3b8">' + fmtDate(p.created_at) + '</div></div>'
         +   '</div>'
         +   '<div style="display:flex;gap:5px">'
         +     '<button class="comm-report-btn" onclick="reportPost(' + p.id + ')" title="Báo cáo vi phạm"><i class="fas fa-flag"></i></button>'
-        +     (p.is_owner ? '<button onclick="deletePost(' + p.id + ')" style="background:none;border:none;color:#ef4444;cursor:pointer;padding:6px;"><i class="fas fa-trash"></i></button>' : '')
+        +     (p.is_owner ? '<button onclick="editPost(' + p.id + ', \'' + esc(p.content).replace(/'/g, "\\'") + '\')" style="background:none;border:none;color:#10b981;cursor:pointer;padding:6px;" title="Sửa bài"><i class="fas fa-edit"></i></button>' : '')
+        +     (p.is_owner ? '<button onclick="deletePost(' + p.id + ')" style="background:none;border:none;color:#ef4444;cursor:pointer;padding:6px;" title="Xoá bài"><i class="fas fa-trash"></i></button>' : '')
         +   '</div>'
         + '</div>'
-        + '<div style="color:#334155;line-height:1.65;margin-bottom:16px;white-space:pre-wrap;word-break:break-word">' + esc(p.content) + '</div>'
+        + '<div style="color:var(--text-main, #334155);line-height:1.65;margin-bottom:16px;white-space:pre-wrap;word-break:break-word">' + esc(p.content) + '</div>'
         + mediaHtml
         + '<div class="comm-post-actions">'
         +   '<button class="comm-post-act-btn" onclick="toggleComments(' + p.id + ')"><i class="far fa-comment-dots"></i> <span id="comment-count-' + p.id + '">' + p.comment_count + '</span> Bình luận</button>'
         + '</div>'
-        + '<div id="comments-' + p.id + '" style="display:none;margin-top:14px;border-top:1px dashed #e2e8f0;padding-top:14px">'
+        + '<div id="comments-' + p.id + '" style="display:none;margin-top:14px;border-top:1px dashed var(--border-color, #e2e8f0);padding-top:14px">'
         +   '<div id="commentList-' + p.id + '" style="margin-bottom:12px"></div>'
         +   '<div style="display:flex;gap:10px;align-items:flex-start">'
         +     "<?php if (!empty($_SESSION['avatar'])): ?>"
@@ -891,7 +915,7 @@ function buildCommentHtml(c, postId, isReply) {
     var safeUserB64 = btoa(unescape(encodeURIComponent(username)));
     var avatarHtml = c.avatar
         ? '<img src="' + esc(c.avatar) + '" class="'+(isReply?'comm-avatar-xs':'comm-avatar-sm')+'" style="object-fit:cover" alt="Avatar">'
-        : '<div class="'+(isReply?'comm-avatar-xs':'comm-avatar-sm')+'" style="display:flex;align-items:center;justify-content:center;font-weight:700;background:#e2e8f0;color:#64748b;font-size:0.7rem">'+esc(username.charAt(0).toUpperCase())+'</div>';
+        : '<div class="'+(isReply?'comm-avatar-xs':'comm-avatar-sm')+'" style="display:flex;align-items:center;justify-content:center;font-weight:700;background:var(--border-color, #e2e8f0);color:var(--text-color, #64748b);font-size:0.7rem">'+esc(username.charAt(0).toUpperCase())+'</div>';
 
     return '<div class="comm-comment-wrapper" id="comment-' + c.id + '">'
         + avatarHtml
@@ -905,6 +929,7 @@ function buildCommentHtml(c, postId, isReply) {
         +     '<span>' + fmtDate(c.created_at) + '</span>'
         +     '<button class="comm-comment-action" onclick="startReplyB64(' + postId + ',' + c.id + ',\'' + safeUserB64 + '\')">Trả lời</button>'
         +     '<button class="comm-comment-action" onclick="reportComment(' + c.id + ')">Báo cáo</button>'
+        +     (c.is_owner ? '<button class="comm-comment-action" onclick="editComment(' + c.id + ',' + postId + ',\'' + esc(c.content).replace(/'/g, "\\'") + '\')" style="color:#10b981">Sửa</button>' : '')
         +     (c.is_owner ? '<button class="comm-comment-action" onclick="deleteComment(' + c.id + ',' + postId + ')" style="color:#ef4444">Xoá</button>' : '')
         +   '</div>'
         + '</div></div>';
@@ -1046,6 +1071,90 @@ async function reportComment(id) {
 }
 async function deletePost(id) { if (!confirm('Xoá bài?')) return; var csrfToken = document.querySelector('meta[name="csrf-token"]'); var fd = new FormData(); fd.append('id',id); fd.append('action','delete_post'); if (csrfToken) fd.append('csrf_token', csrfToken.getAttribute('content')); await fetch('api/community.php', {method:'POST',body:fd}); loadPosts(true); }
 async function deleteComment(id, pid) { if (!confirm('Xoá bình luận?')) return; var csrfToken = document.querySelector('meta[name="csrf-token"]'); var fd = new FormData(); fd.append('id',id); fd.append('action','delete_comment'); if (csrfToken) fd.append('csrf_token', csrfToken.getAttribute('content')); await fetch('api/community.php', {method:'POST',body:fd}); loadComments(pid, true); }
+
+async function editPost(id, currentContent) {
+    const { value: text } = await Swal.fire({
+        title: 'Chỉnh sửa bài đăng',
+        input: 'textarea',
+        inputLabel: 'Nội dung bài viết',
+        inputValue: currentContent,
+        showCancelButton: true,
+        confirmButtonText: 'Lưu thay đổi',
+        cancelButtonText: 'Huỷ',
+        confirmButtonColor: '#10b981',
+        preConfirm: (value) => {
+            if (!value.trim()) {
+                Swal.showValidationMessage('Nội dung không được để trống.');
+                return false;
+            }
+            return value.trim();
+        }
+    });
+
+    if (text) {
+        var csrfToken = document.querySelector('meta[name="csrf-token"]');
+        var fd = new FormData();
+        fd.append('action', 'edit_post');
+        fd.append('id', id);
+        fd.append('content', text);
+        if (csrfToken) fd.append('csrf_token', csrfToken.getAttribute('content'));
+
+        try {
+            var res = await fetch('api/community.php', { method: 'POST', body: fd });
+            var data = await res.json();
+            if (data.success) {
+                Swal.fire({ icon: 'success', title: 'Thành công', text: data.message, confirmButtonColor: '#10b981' });
+                loadPosts(true);
+            } else {
+                Swal.fire('Lỗi', data.message, 'error');
+            }
+        } catch(e) {
+            Swal.fire('Lỗi', 'Không thể kết nối máy chủ.', 'error');
+        }
+    }
+}
+
+async function editComment(id, postId, currentContent) {
+    const { value: text } = await Swal.fire({
+        title: 'Chỉnh sửa bình luận',
+        input: 'textarea',
+        inputLabel: 'Nội dung bình luận',
+        inputValue: currentContent,
+        showCancelButton: true,
+        confirmButtonText: 'Lưu thay đổi',
+        cancelButtonText: 'Huỷ',
+        confirmButtonColor: '#10b981',
+        preConfirm: (value) => {
+            if (!value.trim()) {
+                Swal.showValidationMessage('Nội dung không được để trống.');
+                return false;
+            }
+            return value.trim();
+        }
+    });
+
+    if (text) {
+        var csrfToken = document.querySelector('meta[name="csrf-token"]');
+        var fd = new FormData();
+        fd.append('action', 'edit_comment');
+        fd.append('id', id);
+        fd.append('content', text);
+        if (csrfToken) fd.append('csrf_token', csrfToken.getAttribute('content'));
+
+        try {
+            var res = await fetch('api/community.php', { method: 'POST', body: fd });
+            var data = await res.json();
+            if (data.success) {
+                Swal.fire({ icon: 'success', title: 'Thành công', text: data.message, confirmButtonColor: '#10b981' });
+                loadComments(postId, true);
+            } else {
+                Swal.fire('Lỗi', data.message, 'error');
+            }
+        } catch(e) {
+            Swal.fire('Lỗi', 'Không thể kết nối máy chủ.', 'error');
+        }
+    }
+}
 
 // Global click handler to capture send buttons reliably without touch blocking
 document.addEventListener('click', function(e) {

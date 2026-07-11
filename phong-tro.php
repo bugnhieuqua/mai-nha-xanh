@@ -99,6 +99,12 @@ foreach ($rooms as $r) {
 }
 ?>
 
+<style>
+.page-header {
+    background: linear-gradient(rgba(15, 23, 42, 0.65), rgba(6, 78, 59, 0.72)), url('assets/images/rooms_banner.png') no-repeat center center / cover !important;
+}
+</style>
+
 <!-- Page Header -->
 <section class="page-header">
     <div class="hero-bg-layer"></div>

@@ -14,6 +14,12 @@ include 'includes/header.php';
 
 
 
+<style>
+.hero-section {
+    background: linear-gradient(rgba(15, 23, 42, 0.65), rgba(6, 78, 59, 0.72)), url('assets/images/home_banner.png') no-repeat center center / cover !important;
+}
+</style>
+
 <!-- Hero Section -->
 <section class="hero-section animate-fade-up">
     <div class="hero-bg-layer"></div>

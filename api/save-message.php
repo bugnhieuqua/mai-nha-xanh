@@ -43,6 +43,10 @@ try {
         ':content'   => $content,
         ':type'      => $type
     ]);
+    
+    // Khi nhắn tin mới, hiển thị lại cuộc trò chuyện cho tất cả các thành viên (reset deleted_at)
+    $updateStmt = $pdo->prepare("UPDATE conversation_members SET deleted_at = NULL WHERE conversation_id = :conv_id");
+    $updateStmt->execute([':conv_id' => $conversationId]);
 
     echo json_encode(['status' => 'success', 'message' => 'Lưu tin nhắn vào cơ sở dữ liệu thành công!', 'message_id' => $pdo->lastInsertId()]);
 } catch (Exception $e) {

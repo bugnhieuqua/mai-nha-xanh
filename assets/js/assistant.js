@@ -740,18 +740,78 @@ if (!chatBody || !messageInput || !sendMessageButton || !chatbotToggler) {
   const optimisticMsgTexts  = new Set(); // Để chặn trùng tin vừa gửi xong poll về ngay
 
   // --- Helper: Tạo bubble chat ---
-  const createAdminBubble = (text, timeStr, isAdmin) => {
+  const createAdminBubble = (text, timeStr, isAdmin, messageId = null) => {
     const wrap = document.createElement("div");
     wrap.classList.add("admin-bubble-wrap", isAdmin ? "bot-wrap" : "user-wrap");
+    if (messageId) {
+        wrap.dataset.msgId = messageId;
+    }
     const safeText = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
                          .replace(/\n/g,'<br>');
+    const editBtn = (!isAdmin && messageId)
+        ? `<button class="edit-support-user-btn" onclick="triggerEditSupportUserMessage(${messageId}, this)" style="background:none; border:none; color:#10b981; cursor:pointer; padding: 2px; margin-right: 6px; font-size: 0.75rem;" title="Sửa tin"><i class="fas fa-edit"></i></button>`
+        : '';
+
     wrap.innerHTML = `
-      <div class="admin-bubble ${isAdmin ? 'admin-bubble-bot' : 'admin-bubble-user'}">
-        ${isAdmin ? '<small class="admin-sender-name">Quản trị viên</small>' : ''}
-        ${safeText}
+      <div style="display:flex; align-items:center; width:100%; justify-content: ${isAdmin ? 'flex-start' : 'flex-end'};">
+        ${!isAdmin ? editBtn : ''}
+        <div class="admin-bubble ${isAdmin ? 'admin-bubble-bot' : 'admin-bubble-user'}">
+          ${isAdmin ? '<small class="admin-sender-name">Quản trị viên</small>' : ''}
+          <p style="margin:0;">${safeText}</p>
+        </div>
+        ${isAdmin ? editBtn : ''}
       </div>
       <span class="admin-bubble-time">${timeStr}</span>`;
     return wrap;
+  };
+
+  // Hàm chỉnh sửa tin hỗ trợ của User gửi từ Widget
+  window.triggerEditSupportUserMessage = async function(messageId, btnEl) {
+    const wrapEl = btnEl.closest('.admin-bubble-wrap');
+    const bubbleEl = wrapEl.querySelector('p');
+    const currentText = bubbleEl.textContent;
+
+    const { value: text } = await Swal.fire({
+        title: 'Chỉnh sửa tin nhắn hỗ trợ',
+        input: 'textarea',
+        inputValue: currentText,
+        showCancelButton: true,
+        confirmButtonText: 'Lưu thay đổi',
+        cancelButtonText: 'Huỷ',
+        confirmButtonColor: '#10b981',
+        preConfirm: (value) => {
+            if (!value.trim()) {
+                Swal.showValidationMessage('Nội dung không được để trống.');
+                return false;
+            }
+            return value.trim();
+        }
+    });
+
+    if (text) {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        const fd = new FormData();
+        fd.append('action', 'edit_support');
+        fd.append('message_id', messageId);
+        fd.append('content', text);
+        fd.append('csrf_token', csrfToken);
+
+        try {
+            const res = await fetch('api/edit-chat-message.php', {
+                method: 'POST',
+                body: fd
+            });
+            const data = await res.json();
+            if (data.success) {
+                bubbleEl.innerHTML = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+                Swal.fire({ icon: 'success', title: 'Đã cập nhật tin nhắn', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 });
+            } else {
+                Swal.fire('Lỗi', data.message, 'error');
+            }
+        } catch(e) {
+            Swal.fire('Lỗi', 'Không thể kết nối máy chủ.', 'error');
+        }
+    }
   };
 
   // --- Mở/đóng Admin Chat Popup ---
@@ -914,11 +974,11 @@ if (!chatBody || !messageInput || !sendMessageButton || !chatbotToggler) {
         const timeStr = d.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
         // Tin người dùng gửi (không phải AI)
         if (row.sender === "user" && row.user_message && !row.bot_response) {
-          adminChatBody.appendChild(createAdminBubble(row.user_message, timeStr, false));
+          adminChatBody.appendChild(createAdminBubble(row.user_message, timeStr, false, row.id));
         }
         // Tin admin phản hồi
         if (row.sender === "admin" && row.admin_message) {
-          adminChatBody.appendChild(createAdminBubble(row.admin_message, timeStr, true));
+          adminChatBody.appendChild(createAdminBubble(row.admin_message, timeStr, true, row.id));
         }
       });
 
@@ -958,7 +1018,7 @@ if (!chatBody || !messageInput || !sendMessageButton || !chatbotToggler) {
         if (row.sender === "admin" && row.admin_message) {
           const d = new Date(row.created_at);
           const timeStr = d.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
-          adminChatBody.appendChild(createAdminBubble(row.admin_message, timeStr, true));
+          adminChatBody.appendChild(createAdminBubble(row.admin_message, timeStr, true, row.id));
           hasNewAdmin = true;
           lastAdminMsg = row.admin_message;
           if (!adminChatOpen) adminUnreadCount++;

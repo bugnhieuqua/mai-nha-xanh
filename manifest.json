@@ -2,11 +2,15 @@
   "name": "Mái Nhà Xanh",
   "short_name": "Mái Nhà Xanh",
   "id": "/",
-  "description": "Tìm phòng trọ chất lượng, giá rẻ tại TP.Vinh, Nghệ An. Đăng tin nhanh - Liên hệ dễ dàng.",
+  "description": "Tìm phòng trọ chất lượng, giá rẻ tại TP.Vinh (cũ), Nghệ An. Đăng tin nhanh - Liên hệ dễ dàng.",
   "start_url": "./phong-tro.php",
   "scope": "./",
   "display": "standalone",
-  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "display_override": [
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui"
+  ],
   "background_color": "#0f172a",
   "theme_color": "#10b981",
   "orientation": "portrait-primary",
@@ -36,28 +40,47 @@
       "label": "Mái Nhà Xanh - Tìm phòng trọ"
     }
   ],
-  "categories": ["real estate", "lifestyle", "local"],
+  "categories": [
+    "real estate",
+    "lifestyle",
+    "local"
+  ],
   "shortcuts": [
     {
       "name": "Xem phòng trọ",
       "short_name": "Phòng trọ",
       "url": "phong-tro.php",
       "description": "Danh sách phòng trọ có sẵn tại Vinh, Nghệ An",
-      "icons": [{ "src": "assets/images/logo-192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "assets/images/logo-192.png",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
       "name": "Cộng đồng",
       "short_name": "Cộng đồng",
       "url": "cong-dong.php",
       "description": "Diễn đàn trao đổi cộng đồng",
-      "icons": [{ "src": "assets/images/logo-192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "assets/images/logo-192.png",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
       "name": "Liên hệ",
       "short_name": "Liên hệ",
       "url": "lien-he.php",
       "description": "Liên hệ với chúng tôi",
-      "icons": [{ "src": "assets/images/logo-192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "assets/images/logo-192.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ]
 }
